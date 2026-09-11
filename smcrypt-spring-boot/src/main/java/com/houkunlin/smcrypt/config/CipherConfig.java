@@ -1,0 +1,120 @@
+package com.houkunlin.smcrypt.config;
+
+import com.houkunlin.smcrypt.PropertyLookup;
+import com.houkunlin.smcrypt.codec.CipherEncoding;
+import com.houkunlin.smcrypt.codec.EncodingDetector;
+
+/**
+ * 单个算法的加解密配置。
+ *
+ * <p>从属性（Spring 环境或系统属性）中按 {@code smcrypt.<算法>.<项>} 的键名读取，
+ * 未配置时使用算法内置默认值。支持的配置项：</p>
+ * <ul>
+ *     <li>{@code smcrypt.<alg>.transformation}：完整 JCE 变换串，优先级最高，例如 {@code AES/GCM/NoPadding}；</li>
+ *     <li>{@code smcrypt.<alg>.mode}：模式，与 {@code padding} 组合生成变换串；</li>
+ *     <li>{@code smcrypt.<alg>.padding}：填充方式，默认 {@code PKCS5Padding}；</li>
+ *     <li>{@code smcrypt.<alg>.iv}：初始向量（hex 或 Base64，自动识别）；</li>
+ *     <li>{@code smcrypt.<alg>.encoding}：加密输出所用编码，默认 Base64。</li>
+ * </ul>
+ *
+ * @author HouKunLin
+ */
+public class CipherConfig {
+    private final String algorithm;
+    private final String transformation;
+    private final String mode;
+    private final String padding;
+    private final byte[] iv;
+    private final CipherEncoding encoding;
+
+    public CipherConfig(String algorithm, String transformation, String mode, String padding,
+                        byte[] iv, CipherEncoding encoding) {
+        this.algorithm = algorithm;
+        this.transformation = transformation;
+        this.mode = mode;
+        this.padding = padding;
+        this.iv = iv;
+        this.encoding = encoding;
+    }
+
+    /**
+     * 根据属性解析算法配置
+     *
+     * @param algorithm             算法名称，如 {@code SM4}
+     * @param properties            属性查询接口
+     * @param defaultTransformation 未配置 {@code transformation}/{@code mode} 时使用的默认变换串
+     * @param defaultEncoding       未配置 {@code encoding} 时加密输出使用的默认编码
+     * @return 解析后的算法配置
+     */
+    public static CipherConfig resolve(String algorithm, PropertyLookup properties,
+                                       String defaultTransformation, CipherEncoding defaultEncoding) {
+        String prefix = "smcrypt." + algorithm.toLowerCase() + ".";
+        String transformation = get(properties, prefix + "transformation");
+        String mode = get(properties, prefix + "mode");
+        String padding = get(properties, prefix + "padding");
+        String ivText = get(properties, prefix + "iv");
+        String encodingText = get(properties, prefix + "encoding");
+
+        CipherEncoding encoding = CipherEncoding.fromToken(encodingText);
+        if (encoding == null) {
+            encoding = defaultEncoding;
+        }
+
+        if (transformation == null && mode != null) {
+            String actualPadding = padding != null ? padding : "PKCS5Padding";
+            transformation = algorithm.toUpperCase() + "/" + mode + "/" + actualPadding;
+        }
+        if (transformation == null) {
+            transformation = defaultTransformation;
+        }
+
+        byte[] iv = null;
+        if (ivText != null) {
+            iv = EncodingDetector.detectEncoding(ivText).codec().decode(ivText);
+        }
+
+        return new CipherConfig(algorithm, transformation, mode, padding, iv, encoding);
+    }
+
+    private static String get(PropertyLookup properties, String key) {
+        String value = properties.getProperty(key);
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    public String algorithm() {
+        return algorithm;
+    }
+
+    public String transformation() {
+        return transformation;
+    }
+
+    public String mode() {
+        return mode;
+    }
+
+    public String padding() {
+        return padding;
+    }
+
+    public byte[] iv() {
+        return iv;
+    }
+
+    public CipherEncoding encoding() {
+        return encoding;
+    }
+
+    /**
+     * 是否配置了初始向量
+     *
+     * @return 已配置返回 true
+     */
+    public boolean hasIv() {
+        return iv != null && iv.length > 0;
+    }
+}

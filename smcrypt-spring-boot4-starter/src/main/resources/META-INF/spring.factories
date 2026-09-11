@@ -1,0 +1,4 @@
+# EnvironmentPostProcessor 实现类注册，用于配置文件密文解密
+# Spring Boot 4 中 EnvironmentPostProcessor 已从 org.springframework.boot.env 迁移至 org.springframework.boot 包
+org.springframework.boot.EnvironmentPostProcessor=\
+com.houkunlin.smcrypt.SmCryptEnvironmentPostProcessor
