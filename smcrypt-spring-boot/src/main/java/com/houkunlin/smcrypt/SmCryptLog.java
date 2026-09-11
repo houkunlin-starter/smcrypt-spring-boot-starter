@@ -94,10 +94,15 @@ public final class SmCryptLog {
     /**
      * 统一日志输出入口
      *
+     * <p>仅当早期独立日志上下文不可用（例如命令行工具场景）时才回退到
+     * {@code System.out}/{@code System.err}，属于最后兜底输出，并非常规日志打印，
+     * 因此抑制 SonarQube 规则 {@code java:S106}。</p>
+     *
      * @param level  日志级别
      * @param format 日志格式
      * @param args   占位符参数
      */
+    @SuppressWarnings("java:S106")
     private static void log(LogLevel level, String format, Object... args) {
         SmCryptLogback logback = active;
         if (logback != null) {

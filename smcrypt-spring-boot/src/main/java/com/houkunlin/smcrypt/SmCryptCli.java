@@ -23,8 +23,12 @@ import java.util.Map;
  *     --algorithm SM4 --key 0123... --decrypt --text SM4ENC(hex,xxxx)
  * }</pre>
  *
+ * <p>本类为命令行工具，标准输出/错误流是其结果与用法提示的对外契约，并非日志输出，
+ * 因此保留 {@code System.out}/{@code System.err} 并抑制 SonarQube 规则 {@code java:S106}。</p>
+ *
  * @author HouKunLin
  */
+@SuppressWarnings("java:S106")
 public class SmCryptCli {
 
     /**

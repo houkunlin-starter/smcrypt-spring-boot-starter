@@ -247,11 +247,15 @@ public class SmCryptLogback {
      * 本类独立日志上下文初始化成功（{@link #loggingReady} 为 true 且 {@link #log} 非空）时，
      * 走独立 LoggerContext；否则回退到 {@link System#out}/{@link System#err}，输出带时间戳与
      * {@code [级别]} 前缀的文本，保证解密流程的关键日志不丢失。
+     * <p>
+     * 该回退是日志配置文件缺失或独立上下文初始化失败时的最后兜底，并非常规日志打印，
+     * 因此抑制 SonarQube 规则 {@code java:S106}。
      *
      * @param level  日志级别
      * @param format 日志格式（支持 {@code {}} 占位符）
      * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则追加堆栈输出
      */
+    @SuppressWarnings("java:S106")
     public void logMessage(LogLevel level, String format, Object... args) {
         if (loggingReady && log != null) {
             switch (level) {
