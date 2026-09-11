@@ -32,6 +32,22 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
      * 加解密上下文，由加载器注入
      */
     private SmCryptContext context;
+    /**
+     * 缓存的算法配置，首次解析后复用，避免逐属性重复读取配置
+     */
+    private CipherConfig resolvedConfig;
+    /**
+     * 缓存的密钥内容；{@code keyResolved} 为 true 时该值有效（可能为 null，表示未找到密钥）
+     */
+    private String resolvedKey;
+    /**
+     * 密钥内容是否已解析（用于缓存未找到密钥的结果，避免重复扫描文件）
+     */
+    private boolean keyResolved;
+    /**
+     * 缓存的对称密钥字节，首次解码后复用
+     */
+    private byte[] resolvedSymmetricKey;
 
     /**
      * 默认 JCE 变换串
@@ -72,6 +88,11 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
     @Override
     public void setContext(SmCryptContext context) {
         this.context = context;
+        // 上下文变更后清空缓存，避免沿用旧环境解析出的配置与密钥
+        this.resolvedConfig = null;
+        this.resolvedKey = null;
+        this.keyResolved = false;
+        this.resolvedSymmetricKey = null;
     }
 
     /**
@@ -138,29 +159,42 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
      * @return 算法配置
      */
     protected CipherConfig resolveConfig() {
-        return context().resolveConfig(algorithm(), jceAlgorithm(), defaultTransformation(), defaultEncoding());
+        if (resolvedConfig == null) {
+            resolvedConfig = context().resolveConfig(algorithm(), jceAlgorithm(), defaultTransformation(), defaultEncoding());
+        }
+        return resolvedConfig;
     }
 
     /**
      * 获取当前算法的密钥内容，缺失时抛出异常
      *
+     * <p>密钥内容在首次解析后缓存；未找到密钥时同样缓存该结果，避免逐属性重复扫描密钥文件。</p>
+     *
      * @return 密钥内容
      */
     protected String requireKey() {
-        String key = context().resolveKey(algorithm());
-        if (key == null) {
+        if (!keyResolved) {
+            resolvedKey = context().resolveKey(algorithm());
+            keyResolved = true;
+        }
+        if (resolvedKey == null) {
             throw new IllegalStateException("未找到 " + algorithm() + " 算法所需密钥，请配置 smcrypt."
                     + algorithm().toLowerCase(Locale.ROOT) + ".key 或 smcrypt." + algorithm().toLowerCase(Locale.ROOT) + ".file");
         }
-        return key;
+        return resolvedKey;
     }
 
     /**
      * 获取并解码对称密钥
      *
+     * <p>解码结果在首次获取后缓存，避免逐属性重复解码。</p>
+     *
      * @return 密钥字节
      */
     protected byte[] resolveSymmetricKey() {
-        return KeyCodec.decodeKey(requireKey());
+        if (resolvedSymmetricKey == null) {
+            resolvedSymmetricKey = KeyCodec.decodeKey(requireKey());
+        }
+        return resolvedSymmetricKey;
     }
 }
