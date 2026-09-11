@@ -43,14 +43,14 @@
 
 - **零侵入**：业务代码照常使用 `@Value`、`Environment`、`@ConfigurationProperties`，无需感知密文；
 - **多版本兼容**：同一套核心逻辑，分别适配 Spring Boot 2 / 3 / 4；
-- **多算法**：内置国密 SM2 / SM4 及 AES / DES / RSA / ECC；
+- **多算法**：内置国密 SM2 / SM4 及 AES / DES / DESEDE (3DES) / RSA / ECC；
 - **多编码**：支持 hex、Base64，可显式声明或自动识别；
 - **可扩展**：业务系统可通过 SPI 接入自定义算法，或对接加密机（HSM）等外部解密能力。
 
 ## 二、核心特性
 
 - 同时支持 Spring Boot 2 / 3 / 4，按版本选用对应 Starter；
-- 内置算法：SM4、SM2、AES、DES、RSA、ECC（ECIES），基于 BouncyCastle；
+- 内置算法：SM4、SM2、AES、DES、DESEDE (3DES)、RSA、ECC（ECIES），基于 BouncyCastle；
 - 密文编码支持 hex 与 Base64，可显式声明（`SM4ENC(hex,...)`）或自动识别；
 - 支持 properties、yml/yaml、命令行参数、环境变量等所有 Spring Boot 配置来源；
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
@@ -224,29 +224,32 @@ public class DemoService {
 
 ### 算法前缀
 
-| 算法 | 前缀          |
-|------|---------------|
-| SM4  | `SM4ENC(...)` |
-| SM2  | `SM2ENC(...)` |
-| AES  | `AESENC(...)` |
-| DES  | `DESENC(...)` |
-| RSA  | `RSAENC(...)` |
-| ECC  | `ECCENC(...)` |
+| 算法   | 前缀             |
+|--------|------------------|
+| SM4    | `SM4ENC(...)`    |
+| SM2    | `SM2ENC(...)`    |
+| AES    | `AESENC(...)`    |
+| DES    | `DESENC(...)`    |
+| DESEDE | `DESEDEENC(...)` |
+| RSA    | `RSAENC(...)`    |
+| ECC    | `ECCENC(...)`    |
 
 ## 八、支持的算法
 
-| 算法 | 前缀     | 默认变换               | 密钥要求             | 说明                         |
-|------|----------|------------------------|----------------------|------------------------------|
-| SM4  | `SM4ENC` | `SM4/ECB/PKCS5Padding` | 16 字节对称密钥      | 国密分组密码                 |
-| SM2  | `SM2ENC` | `SM2`（C1C3C2）        | EC 私钥（sm2p256v1） | 国密非对称，默认 C1C3C2 顺序 |
-| AES  | `AESENC` | `AES/ECB/PKCS5Padding` | 16 / 24 / 32 字节    | 国际通用对称加密             |
-| DES  | `DESENC` | `DES/ECB/PKCS5Padding` | 8 字节               | 兼容遗留系统                 |
-| RSA  | `RSAENC` | `RSA/ECB/PKCS1Padding` | RSA 私钥             | 非对称加密                   |
-| ECC  | `ECCENC` | `ECIES`                | EC 私钥              | 基于 ECIES 的椭圆曲线加密    |
+| 算法   | 前缀        | 默认变换                  | 密钥要求             | 说明                             |
+|--------|-------------|---------------------------|----------------------|----------------------------------|
+| SM4    | `SM4ENC`    | `SM4/ECB/PKCS5Padding`    | 16 字节对称密钥      | 国密分组密码                     |
+| SM2    | `SM2ENC`    | `SM2`（C1C3C2）           | EC 私钥（sm2p256v1） | 国密非对称，默认 C1C3C2 顺序     |
+| AES    | `AESENC`    | `AES/ECB/PKCS5Padding`    | 16 / 24 / 32 字节    | 国际通用对称加密                 |
+| DES    | `DESENC`    | `DES/ECB/PKCS5Padding`    | 8 字节               | 兼容遗留系统                     |
+| DESEDE | `DESEDEENC` | `DESede/ECB/PKCS5Padding` | 16 / 24 字节         | 3DES（Triple DES），兼容遗留系统 |
+| RSA    | `RSAENC`    | `RSA/ECB/PKCS1Padding`    | RSA 私钥             | 非对称加密                       |
+| ECC    | `ECCENC`    | `ECIES`                   | EC 私钥              | 基于 ECIES 的椭圆曲线加密        |
 
 说明：
 
 - 对称算法通过 JCE `Cipher` 实现，支持通过 `transformation` / `mode` / `padding` / `iv` 自定义；
+- 3DES（`DESEDE`）密钥支持 16 字节（2-key，K1=K3）或 24 字节（3-key），属过时算法，仅建议用于兼容遗留系统；
 - 非对称算法仅需提供 **私钥**：解密使用私钥，加密时自动由私钥推导公钥；
 - SM2 密文顺序可通过 `smcrypt.sm2.mode=C1C2C3` 切换；
 - SM2 / ECC 的椭圆曲线由密钥本身决定，无需额外配置；
@@ -264,7 +267,7 @@ public class DemoService {
 4. 配置文件 `application.yml` / `application.properties` 中的 `smcrypt.<算法>.key` / `smcrypt.<算法>.file`；
 5. 默认密钥文件：`smcrypt-<算法>.key` 或 `smcrypt-<算法>.properties`（先文件系统、后 classpath）。
 
-其中 `<算法>` 使用小写名称：`sm4`、`sm2`、`aes`、`des`、`rsa`、`ecc`。
+其中 `<算法>` 使用小写名称：`sm4`、`sm2`、`aes`、`des`、`desede`、`rsa`、`ecc`。
 
 > 说明：第 1~3 项由 Spring 的 `commandLineArgs` / `systemProperties` / `systemEnvironment` 属性源提供，
 > 它们的优先级都高于配置文件，因此即使 `application.yml` 中已经配置了密钥，也可以通过
@@ -293,7 +296,7 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 ## 十、配置项参考
 
 所有配置项均以 `smcrypt.<算法>.<项>` 命名，其中 `<算法>` 使用小写名称
-（`sm4`、`sm2`、`aes`、`des`、`rsa`、`ecc`），未配置时使用默认值。
+（`sm4`、`sm2`、`aes`、`des`、`desede`、`rsa`、`ecc`），未配置时使用默认值。
 
 ### 10.1 配置项总览
 
@@ -312,24 +315,24 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 ### 10.2 算法与参数支持矩阵
 
-| 配置项           | SM4 / AES / DES（对称） | RSA                                   | ECC（ECIES）         | SM2                    |
-|------------------|-------------------------|---------------------------------------|----------------------|------------------------|
-| `transformation` | 支持                    | 支持                                  | 支持（默认 `ECIES`） | 不生效                 |
-| `mode`           | 支持                    | 参与拼接（建议改用 `transformation`） | 不可设置             | 仅 `C1C3C2` / `C1C2C3` |
-| `padding`        | 支持                    | 参与拼接（建议改用 `transformation`） | 不可设置             | 不生效                 |
-| `iv`             | 支持（非 ECB 模式）     | 不适用                                | 不适用               | 不适用                 |
-| `encoding`       | 支持                    | 支持                                  | 支持                 | 支持                   |
+| 配置项           | SM4 / AES / DES / DESEDE（对称） | RSA                                   | ECC（ECIES）         | SM2                    |
+|------------------|----------------------------------|---------------------------------------|----------------------|------------------------|
+| `transformation` | 支持                             | 支持                                  | 支持（默认 `ECIES`） | 不生效                 |
+| `mode`           | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置             | 仅 `C1C3C2` / `C1C2C3` |
+| `padding`        | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置             | 不生效                 |
+| `iv`             | 支持（非 ECB 模式）              | 不适用                                | 不适用               | 不适用                 |
+| `encoding`       | 支持                             | 支持                                  | 支持                 | 支持                   |
 
 说明：
 
-- **SM4 / AES / DES**：`transformation` / `mode` / `padding` / `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
+- **SM4 / AES / DES / DESEDE**：`transformation` / `mode` / `padding` / `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
   `iv`；
 - **RSA**：建议直接用 `transformation` 指定填充，如 `RSA/ECB/PKCS1Padding`、`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`；
 - **ECC**：基于 ECIES，仅使用 `transformation`（默认 `ECIES`）， **不要**配置 `mode` / `padding`，否则会拼出非法变换串；
 - **SM2**：`mode` 仅用于选择密文顺序（默认 `C1C3C2`），其余参数不生效；
 - `mode` / `padding` 仅在 **未配置** `transformation` 且 **设置了** `mode` 时才参与变换串拼接；只配置 `padding`
   不会改变默认变换串；
-- `iv` 长度必须与算法分组一致：AES / SM4 为 16 字节（32 位 hex），DES 为 8 字节（16 位 hex）；GCM 推荐 12 字节。
+- `iv` 长度必须与算法分组一致：AES / SM4 为 16 字节（32 位 hex），DES / DESEDE 为 8 字节（16 位 hex）；GCM 推荐 12 字节。
 
 ### 10.3 常用场景示例
 
@@ -344,6 +347,8 @@ smcrypt.sm4.key=0123456789abcdeffedcba9876543210
 smcrypt.aes.key=00112233445566778899aabbccddeeff
 # DES
 smcrypt.des.key=0123456789abcdef
+# 3DES（16 字节 2-key 或 24 字节 3-key）
+smcrypt.desede.key=0123456789abcdeffedcba98765432100123456789abcdef
 ```
 
 #### 场景 2：CBC 模式 + 自定义 IV
@@ -427,6 +432,18 @@ smcrypt:
     iv: 00112233445566778899aabb
     encoding: hex
 ```
+
+#### 场景 10：3DES（兼容遗留系统）
+
+```properties
+# 16 字节 2-key（K1=K3）或 24 字节 3-key 均可，由密钥长度决定
+smcrypt.desede.key=0123456789abcdeffedcba9876543210
+# 如需 CBC，需配置 8 字节 IV（16 位 hex）
+smcrypt.desede.mode=CBC
+smcrypt.desede.iv=0123456789abcdef
+```
+
+> 3DES 属过时算法，仅建议用于兼容遗留系统密文；新系统请使用 AES 或 SM4。
 
 ## 十一、自定义算法 / 加密机接入
 
@@ -544,19 +561,19 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 参数说明：
 
-| 参数               | 简写 | 说明                                                    |
-|--------------------|------|---------------------------------------------------------|
-| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `AES` / `DES` / `RSA` / `ECC` |
-| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文           |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                          |
-| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                  |
-| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）         |
-| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`               |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                     |
-| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                           |
-| `--iv`             |      | 初始向量（hex / Base64）                                |
-| `--decrypt`        |      | 解密模式                                                |
-| `--help`           | `-h` | 显示帮助                                                |
+| 参数               | 简写 | 说明                                                               |
+|--------------------|------|--------------------------------------------------------------------|
+| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `AES` / `DES` / `DESEDE` / `RSA` / `ECC` |
+| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                      |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                     |
+| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                             |
+| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                    |
+| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                          |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                |
+| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                      |
+| `--iv`             |      | 初始向量（hex / Base64）                                           |
+| `--decrypt`        |      | 解密模式                                                           |
+| `--help`           | `-h` | 显示帮助                                                           |
 
 解密示例：
 

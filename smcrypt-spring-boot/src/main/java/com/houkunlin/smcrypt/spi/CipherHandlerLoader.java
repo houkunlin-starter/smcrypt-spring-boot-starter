@@ -12,7 +12,7 @@ import java.util.*;
  *
  * <p>按以下顺序加载处理器并注入上下文：</p>
  * <ol>
- *     <li>内置处理器（SM4、SM2、AES、DES、RSA、ECC）；</li>
+ *     <li>内置处理器（SM4、SM2、AES、DES、DESEDE、RSA、ECC）；</li>
  *     <li>通过 {@link ServiceLoader}（{@code META-INF/services}）注册的处理器；</li>
  *     <li>通过 {@link SpringFactoriesLoader}（{@code spring.factories}）注册的处理器。</li>
  * </ol>
@@ -59,6 +59,7 @@ public class CipherHandlerLoader {
                 new Sm2Handler(),
                 new AesHandler(),
                 new DesHandler(),
+                new DesEdeHandler(),
                 new RsaHandler(),
                 new EccHandler());
     }

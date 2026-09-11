@@ -17,6 +17,18 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandler {
 
+    /**
+     * 密钥算法名称（JCE 规范名）
+     *
+     * <p>默认与 {@link #algorithm()} 相同；当密文前缀与 JCE 密钥算法名不一致时（例如 3DES 的前缀
+     * 为 {@code DESEDE}、而密钥算法名为 {@code DESede}），由子类覆写。</p>
+     *
+     * @return 用于构造 {@link SecretKeySpec} 的密钥算法名
+     */
+    protected String keyAlgorithm() {
+        return algorithm();
+    }
+
     @Override
     protected byte[] doDecrypt(byte[] cipherBytes, CipherConfig config) throws Exception {
         Cipher cipher = Cipher.getInstance(config.transformation(), BouncyCastleSupport.provider());
@@ -40,7 +52,7 @@ public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandl
      * @throws Exception 初始化失败时抛出
      */
     private void initCipher(Cipher cipher, int mode, CipherConfig config) throws Exception {
-        SecretKeySpec keySpec = new SecretKeySpec(resolveSymmetricKey(), algorithm());
+        SecretKeySpec keySpec = new SecretKeySpec(resolveSymmetricKey(), keyAlgorithm());
         if (config.hasIv()) {
             cipher.init(mode, keySpec, new IvParameterSpec(config.iv()));
         } else {

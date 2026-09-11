@@ -149,7 +149,7 @@ public class SmCryptCli {
      */
     private static void printUsage() {
         System.out.println("用法：SmCryptCli --algorithm <算法> --text <内容> [选项]");
-        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / AES / DES / RSA / ECC");
+        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / AES / DES / DESEDE / RSA / ECC");
         System.out.println("  --text, -t        待加密明文；配合 --decrypt 时表示待解密密文");
         System.out.println("  --key, -k         密钥内容（hex / Base64 / PEM）");
         System.out.println("  --file, -f        密钥文件路径（file: 或 classpath:）");

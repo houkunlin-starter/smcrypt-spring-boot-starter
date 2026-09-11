@@ -18,6 +18,8 @@ class CipherHandlerRoundTripTest {
     private static final String SM4_KEY = "0123456789abcdeffedcba9876543210";
     private static final String AES_KEY = "00112233445566778899aabbccddeeff";
     private static final String DES_KEY = "0123456789abcdef";
+    private static final String DESEDE_KEY_16 = "0123456789abcdeffedcba9876543210";
+    private static final String DESEDE_KEY_24 = "0123456789abcdeffedcba98765432100123456789abcdef";
 
     @Test
     void sm4RoundTripWithDefaultBase64() throws Exception {
@@ -65,6 +67,34 @@ class CipherHandlerRoundTripTest {
         handler.setContext(TestContexts.context(singleton("smcrypt.des.key", DES_KEY)));
         String cipher = handler.getEncryptText("des-data");
         assertEquals("des-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void desEdeRoundTripWithTwoKey() throws Exception {
+        DesEdeHandler handler = new DesEdeHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.desede.key", DESEDE_KEY_16)));
+        String cipher = handler.getEncryptText("desede-2key");
+        assertTrue(cipher.startsWith("DESEDEENC("));
+        assertEquals("desede-2key", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void desEdeRoundTripWithThreeKey() throws Exception {
+        DesEdeHandler handler = new DesEdeHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.desede.key", DESEDE_KEY_24)));
+        String cipher = handler.getEncryptText("desede-3key");
+        assertEquals("desede-3key", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void desEdeCbcRoundTrip() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.desede.key", DESEDE_KEY_24);
+        properties.put("smcrypt.desede.mode", "CBC");
+        properties.put("smcrypt.desede.iv", "0123456789abcdef");
+        DesEdeHandler handler = new DesEdeHandler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("desede-cbc");
+        assertEquals("desede-cbc", handler.getDecryptText(cipher));
     }
 
     @Test
