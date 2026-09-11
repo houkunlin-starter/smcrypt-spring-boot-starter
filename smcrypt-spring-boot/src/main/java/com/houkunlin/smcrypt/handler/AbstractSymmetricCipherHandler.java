@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.handler;
 
 import com.houkunlin.smcrypt.BouncyCastleSupport;
+import com.houkunlin.smcrypt.SmCryptLog;
 import com.houkunlin.smcrypt.config.CipherConfig;
 import com.houkunlin.smcrypt.config.MacAlgorithm;
 import org.bouncycastle.util.Arrays;
@@ -9,7 +10,9 @@ import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
+import java.util.Locale;
 
 /**
  * 对称加密处理器抽象基类。
@@ -24,6 +27,11 @@ import java.security.MessageDigest;
  * @author HouKunLin
  */
 public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandler {
+
+    /**
+     * 是否已提示过 MAC 复用加密密钥，避免逐属性重复告警
+     */
+    private boolean macKeyReuseWarned;
 
     /**
      * 密钥算法名称（JCE 规范名）
@@ -94,10 +102,29 @@ public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandl
      */
     private byte[] computeMac(byte[] cipherBytes, CipherConfig config) throws Exception {
         MacAlgorithm macAlgorithm = config.macAlgorithm();
-        byte[] key = config.macKey() != null ? config.macKey() : resolveSymmetricKey();
+        byte[] key = config.macKey();
+        if (key == null) {
+            key = resolveSymmetricKey();
+            warnMacKeyReuseOnce(macAlgorithm);
+        }
         Mac mac = Mac.getInstance(macAlgorithm.jceName(), BouncyCastleSupport.provider());
         mac.init(new SecretKeySpec(key, macAlgorithm.jceName()));
         return mac.doFinal(cipherBytes);
+    }
+
+    /**
+     * 提示 MAC 复用加密密钥（每个处理器仅提示一次）
+     *
+     * @param macAlgorithm MAC 算法
+     */
+    private void warnMacKeyReuseOnce(MacAlgorithm macAlgorithm) {
+        if (macKeyReuseWarned) {
+            return;
+        }
+        macKeyReuseWarned = true;
+        String lower = algorithm().toLowerCase(Locale.ROOT);
+        SmCryptLog.warn("[SMCRYPT] 算法 {} 已启用完整性校验（{}）但未单独配置 smcrypt.{}.mac-key，将复用加密密钥；"
+                + "建议单独配置 MAC 密钥，避免加解密与完整性校验共用同一密钥", algorithm(), macAlgorithm.jceName(), lower);
     }
 
     /**
@@ -109,11 +136,17 @@ public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandl
      * @throws Exception 初始化失败时抛出
      */
     private void initCipher(Cipher cipher, int mode, CipherConfig config) throws Exception {
-        SecretKeySpec keySpec = new SecretKeySpec(resolveSymmetricKey(), keyAlgorithm());
-        if (config.hasIv()) {
-            cipher.init(mode, keySpec, new IvParameterSpec(config.iv()));
-        } else {
-            cipher.init(mode, keySpec);
+        byte[] key = resolveSymmetricKey();
+        SecretKeySpec keySpec = new SecretKeySpec(key, keyAlgorithm());
+        try {
+            if (config.hasIv()) {
+                cipher.init(mode, keySpec, new IvParameterSpec(config.iv()));
+            } else {
+                cipher.init(mode, keySpec);
+            }
+        } catch (InvalidKeyException e) {
+            throw new IllegalArgumentException("密钥长度不符合 " + algorithm() + " 算法要求（当前 " + key.length
+                    + " 字节），请检查 smcrypt." + algorithm().toLowerCase(Locale.ROOT) + ".key：" + e.getMessage(), e);
         }
     }
 }

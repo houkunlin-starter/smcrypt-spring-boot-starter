@@ -23,6 +23,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * 非对称私钥加载与公钥推导工具。
@@ -38,6 +39,10 @@ public final class PrivateKeyLoader {
      * EC 密钥工厂算法名称（SM2、ECC 均映射到 EC）
      */
     private static final String EC_ALGORITHM = "EC";
+    /**
+     * 空白字符匹配（预编译）
+     */
+    private static final Pattern WHITESPACE = Pattern.compile("\\s");
 
     /**
      * 工具类，禁止实例化
@@ -147,7 +152,7 @@ public final class PrivateKeyLoader {
      * @return 解码后的字节数组
      */
     private static byte[] decodeBase64OrRaw(String value) {
-        String compact = value.replaceAll("\\s", "");
+        String compact = WHITESPACE.matcher(value).replaceAll("");
         try {
             return Base64.getDecoder().decode(compact);
         } catch (IllegalArgumentException e) {

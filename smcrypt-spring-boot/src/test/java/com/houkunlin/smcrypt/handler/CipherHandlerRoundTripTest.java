@@ -71,6 +71,37 @@ class CipherHandlerRoundTripTest {
     }
 
     @Test
+    void sm4PlainKeyEncodingKeepsWhitespace() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.sm4.key", "my secret key 12");
+        properties.put("smcrypt.sm4.key-encoding", "plain");
+        Sm4Handler handler = new Sm4Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("plain-key");
+        assertEquals("plain-key", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void aesMacKeyExplicitHexEncoding() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.aes.key", AES_KEY);
+        properties.put("smcrypt.aes.mac", "HmacSHA256");
+        properties.put("smcrypt.aes.mac-key", "aa bb cc dd ee ff 00 11 22 33 44 55 66 77 88 99");
+        properties.put("smcrypt.aes.mac-key-encoding", "hex");
+        AesHandler handler = new AesHandler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("mac-hex-key");
+        assertEquals("mac-hex-key", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void invalidKeyLengthGivesClearMessage() {
+        Sm4Handler handler = new Sm4Handler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.sm4.key", "00112233")));
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> handler.getEncryptText("bad-key"));
+        assertTrue(error.getMessage().contains("SM4"));
+    }
+
+    @Test
     void aesGcmRoundTrip() throws Exception {
         Map<String, String> properties = singleton("smcrypt.aes.key", AES_KEY);
         properties.put("smcrypt.aes.transformation", "AES/GCM/NoPadding");

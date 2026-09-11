@@ -193,7 +193,7 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
      */
     protected byte[] resolveSymmetricKey() {
         if (resolvedSymmetricKey == null) {
-            resolvedSymmetricKey = KeyCodec.decodeKey(requireKey());
+            resolvedSymmetricKey = KeyCodec.decodeKey(requireKey(), resolveConfig().keyEncoding());
         }
         return resolvedSymmetricKey;
     }

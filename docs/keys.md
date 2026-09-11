@@ -25,6 +25,8 @@
 - `.properties` 文件：读取 `key` 属性，兼容 `secret_key`；
 - 其他文件：整体内容（去除首尾空白）作为密钥；
 - 对称密钥：支持 hex、Base64，或直接使用原始口令（按 UTF-8 字节）；
+- 可通过 `smcrypt.<算法>.key-encoding` 显式指定对称密钥编码（`hex` / `base64` / `plain`）；未配置时自动识别，
+  全为十六进制字符的密钥会被优先按 hex 解码，含空白口令建议显式配置为 `plain`；
 - 非对称私钥：支持 PEM 与 Base64/DER（PKCS#8）两种格式。
 
 示例：

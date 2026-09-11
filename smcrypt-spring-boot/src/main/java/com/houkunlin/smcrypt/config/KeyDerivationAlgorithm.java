@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.config;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * 口令派生函数（KDF）算法。
@@ -24,6 +25,11 @@ public enum KeyDerivationAlgorithm {
     ARGON2;
 
     /**
+     * 非字母数字字符匹配（预编译），用于归一化配置值
+     */
+    private static final Pattern NON_ALNUM = Pattern.compile("[^A-Za-z0-9]");
+
+    /**
      * 解析 KDF 标记
      *
      * <p>忽略大小写与分隔符，支持 {@code PBKDF2}、{@code scrypt}、{@code Argon2} / {@code Argon2id}。
@@ -37,7 +43,7 @@ public enum KeyDerivationAlgorithm {
         if (token == null) {
             return null;
         }
-        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
+        String normalized = NON_ALNUM.matcher(token).replaceAll("").toUpperCase(Locale.ROOT);
         if (normalized.isEmpty()) {
             return null;
         }

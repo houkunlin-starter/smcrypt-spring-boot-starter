@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.config;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * 完整性校验（MAC）算法。
@@ -22,6 +23,10 @@ public enum MacAlgorithm {
 
     private final String jceName;
     private final int macLength;
+    /**
+     * 非字母数字字符匹配（预编译），用于归一化配置值
+     */
+    private static final Pattern NON_ALNUM = Pattern.compile("[^A-Za-z0-9]");
 
     MacAlgorithm(String jceName, int macLength) {
         this.jceName = jceName;
@@ -60,7 +65,7 @@ public enum MacAlgorithm {
         if (token == null) {
             return null;
         }
-        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
+        String normalized = NON_ALNUM.matcher(token).replaceAll("").toUpperCase(Locale.ROOT);
         if (normalized.isEmpty()) {
             return null;
         }

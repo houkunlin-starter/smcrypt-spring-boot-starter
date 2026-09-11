@@ -4,6 +4,7 @@ import com.houkunlin.smcrypt.PropertyLookup;
 import com.houkunlin.smcrypt.codec.CipherEncoding;
 import com.houkunlin.smcrypt.codec.EncodingDetector;
 import com.houkunlin.smcrypt.key.KeyCodec;
+import com.houkunlin.smcrypt.key.KeyEncoding;
 
 import java.util.Locale;
 
@@ -62,9 +63,17 @@ public class CipherConfig {
      * MAC 密钥；为 null 表示复用加密密钥
      */
     private final byte[] macKey;
+    /**
+     * 密钥编码；为 null 表示自动识别
+     */
+    private final KeyEncoding keyEncoding;
+    /**
+     * MAC 密钥编码；为 null 表示自动识别
+     */
+    private final KeyEncoding macKeyEncoding;
 
     /**
-     * 构造算法配置
+     * 构造算法配置（密钥编码自动识别）
      *
      * @param algorithm      算法名称
      * @param transformation JCE 变换串
@@ -77,6 +86,26 @@ public class CipherConfig {
      */
     public CipherConfig(String algorithm, String transformation, String mode, String padding,
                         byte[] iv, CipherEncoding encoding, MacAlgorithm macAlgorithm, byte[] macKey) {
+        this(algorithm, transformation, mode, padding, iv, encoding, macAlgorithm, macKey, null, null);
+    }
+
+    /**
+     * 构造算法配置
+     *
+     * @param algorithm       算法名称
+     * @param transformation  JCE 变换串
+     * @param mode            加密模式
+     * @param padding         填充方式
+     * @param iv              初始向量
+     * @param encoding        加密输出编码
+     * @param macAlgorithm    完整性校验算法；null 表示不启用
+     * @param macKey          MAC 密钥；null 表示复用加密密钥
+     * @param keyEncoding     密钥编码；null 表示自动识别
+     * @param macKeyEncoding  MAC 密钥编码；null 表示自动识别
+     */
+    public CipherConfig(String algorithm, String transformation, String mode, String padding,
+                        byte[] iv, CipherEncoding encoding, MacAlgorithm macAlgorithm, byte[] macKey,
+                        KeyEncoding keyEncoding, KeyEncoding macKeyEncoding) {
         this.algorithm = algorithm;
         this.transformation = transformation;
         this.mode = mode;
@@ -85,6 +114,8 @@ public class CipherConfig {
         this.encoding = encoding;
         this.macAlgorithm = macAlgorithm;
         this.macKey = macKey;
+        this.keyEncoding = keyEncoding;
+        this.macKeyEncoding = macKeyEncoding;
     }
 
     /**
@@ -126,14 +157,16 @@ public class CipherConfig {
         }
 
         MacAlgorithm macAlgorithmValue = MacAlgorithm.fromToken(get(properties, prefix + "mac"));
+        KeyEncoding macKeyEncodingValue = KeyEncoding.fromToken(get(properties, prefix + "mac-key-encoding"));
         byte[] macKeyValue = null;
         String macKeyText = get(properties, prefix + "mac-key");
         if (macKeyText != null) {
-            macKeyValue = KeyCodec.decodeKey(macKeyText);
+            macKeyValue = KeyCodec.decodeKey(macKeyText, macKeyEncodingValue);
         }
+        KeyEncoding keyEncodingValue = KeyEncoding.fromToken(get(properties, prefix + "key-encoding"));
 
         return new CipherConfig(algorithm, transformationValue, modeValue, paddingValue, ivValue, encodingValue,
-                macAlgorithmValue, macKeyValue);
+                macAlgorithmValue, macKeyValue, keyEncodingValue, macKeyEncodingValue);
     }
 
     /**
@@ -222,6 +255,24 @@ public class CipherConfig {
      */
     public byte[] macKey() {
         return macKey;
+    }
+
+    /**
+     * 获取密钥编码
+     *
+     * @return 密钥编码；未配置时返回 null（自动识别）
+     */
+    public KeyEncoding keyEncoding() {
+        return keyEncoding;
+    }
+
+    /**
+     * 获取 MAC 密钥编码
+     *
+     * @return MAC 密钥编码；未配置时返回 null（自动识别）
+     */
+    public KeyEncoding macKeyEncoding() {
+        return macKeyEncoding;
     }
 
     /**
