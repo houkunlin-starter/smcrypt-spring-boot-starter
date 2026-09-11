@@ -283,7 +283,8 @@ public class DemoService {
   - 对称：`AES-256-GCM`（国际通用）或 `SM4-GCM` / `SM4-CBC`（国密合规）；
   - 非对称：`RSA-3072 + OAEP`（国际通用）或 `SM2`（国密合规）。
 - 可接受（需正确使用）：
-  - `AES-128/192/256-CBC`、`SM4-CBC`（必须使用随机且不可复用的 IV，并建议增加完整性校验）；
+  - `AES-128/192/256-CBC`、`SM4-CBC`（必须使用随机且不可复用的 IV；非 AEAD 模式无完整性校验，防篡改请改用 GCM 或自行增加
+    MAC）；
   - `RSA-2048 + OAEP`、`ECC/ECIES`（P-256 及以上曲线）。
 - 不推荐 / 仅兼容：
   - `DES`、`3DES(DESEDE)`：强度不足或已过时；
@@ -300,7 +301,10 @@ public class DemoService {
   smcrypt.aes.iv=<每次加密随机生成的 IV>
   ```
 - `IV` 必须随机、每次加密不同且不得复用（GCM 复用 IV 会导致密钥流泄露）；
-- CBC + PKCS5/PKCS7 存在填充预言攻击面，建议改用 AEAD（GCM）或增加 MAC 校验；
+- CBC + PKCS5/PKCS7 存在填充预言攻击面，建议改用 AEAD（GCM）；
+- **完整性校验说明**：GCM 等 AEAD 模式自带认证标签（JCE 解密时会校验，密文被篡改会抛 `AEADBadTagException`）；SM2 / SM9 /
+  ECIES 算法本身含 C3 或 MAC 校验； **CBC / ECB 等非 AEAD 模式本 starter 不做额外的完整性校验**，如需防篡改请改用 GCM
+  或自行对密文增加 MAC；
 - RSA 加密请使用 OAEP（`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`），避免 PKCS#1 v1.5；
 - 密钥长度下限：AES / SM4 至少 128 位，RSA 至少 2048 位（推荐 3072 位），ECC / SM2 至少 256 位。
 

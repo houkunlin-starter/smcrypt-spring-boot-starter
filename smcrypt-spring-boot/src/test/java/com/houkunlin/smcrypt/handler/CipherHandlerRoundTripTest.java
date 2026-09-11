@@ -70,6 +70,17 @@ class CipherHandlerRoundTripTest {
     }
 
     @Test
+    void aesGcmRoundTrip() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.aes.key", AES_KEY);
+        properties.put("smcrypt.aes.transformation", "AES/GCM/NoPadding");
+        properties.put("smcrypt.aes.iv", "00112233445566778899aabb");
+        AesHandler handler = new AesHandler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("aes-gcm-data");
+        assertEquals("aes-gcm-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
     void desRoundTrip() throws Exception {
         DesHandler handler = new DesHandler();
         handler.setContext(TestContexts.context(singleton("smcrypt.des.key", DES_KEY)));
