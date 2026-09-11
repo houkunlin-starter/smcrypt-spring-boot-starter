@@ -9,8 +9,8 @@ plugins {
 apply from: rootProject.file("publishing.gradle")
 
 dependencies {
-    // BouncyCastle 提供 SM2/SM4 及 AES/DES/RSA/ECC 算法支持，通过 BOM 统一版本
-    api platform('org.bouncycastle:bc-jdk15to18-bom:1.85.2')
+    // BouncyCastle 提供 SM2/SM4/SM9 及 AES/DES/RSA/ECC 算法支持，通过 BOM 统一版本（SM9 需 1.86+）
+    api platform('org.bouncycastle:bc-jdk15to18-bom:1.86')
     api 'org.bouncycastle:bcprov-jdk15to18'
     api 'org.bouncycastle:bcpkix-jdk15to18'
 

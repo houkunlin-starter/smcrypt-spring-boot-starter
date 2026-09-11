@@ -2,10 +2,18 @@ package com.houkunlin.smcrypt.handler;
 
 import com.houkunlin.smcrypt.BouncyCastleSupport;
 import com.houkunlin.smcrypt.TestContexts;
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
+import org.bouncycastle.crypto.KeyGenerationParameters;
+import org.bouncycastle.crypto.generators.SM9EncMasterKeyPairGenerator;
+import org.bouncycastle.crypto.params.SM9EncMasterPrivateKeyParameters;
+import org.bouncycastle.crypto.params.SM9EncMasterPublicKeyParameters;
+import org.bouncycastle.crypto.params.SM9EncPrivateKeyParameters;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -122,6 +130,59 @@ class CipherHandlerRoundTripTest {
         handler.setContext(TestContexts.context(singleton("smcrypt.ecc.key", privateKey(keyPair))));
         String cipher = handler.getEncryptText("ecc-data");
         assertEquals("ecc-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void sm9RawSm4RoundTrip() throws Exception {
+        assertSm9RoundTrip(null, null);
+    }
+
+    @Test
+    void sm9RawStreamRoundTrip() throws Exception {
+        assertSm9RoundTrip("STREAM", null);
+    }
+
+    @Test
+    void sm9Asn1Sm4RoundTrip() throws Exception {
+        assertSm9RoundTrip(null, "asn1");
+    }
+
+    @Test
+    void sm9Asn1StreamRoundTrip() throws Exception {
+        assertSm9RoundTrip("STREAM", "asn1");
+    }
+
+    private void assertSm9RoundTrip(String mode, String cipherFormat) throws Exception {
+        Sm9Handler handler = new Sm9Handler();
+        handler.setContext(TestContexts.context(sm9Properties(mode, cipherFormat)));
+        String cipher = handler.getEncryptText("sm9-data");
+        assertTrue(cipher.startsWith("SM9ENC("));
+        assertEquals("sm9-data", handler.getDecryptText(cipher));
+    }
+
+    /**
+     * 模拟 KGC：生成主密钥对并派生用户私钥，构造 SM9 配置。
+     */
+    private static Map<String, String> sm9Properties(String mode, String cipherFormat) {
+        SM9EncMasterKeyPairGenerator generator = new SM9EncMasterKeyPairGenerator();
+        generator.init(new KeyGenerationParameters(new SecureRandom(), 256));
+        AsymmetricCipherKeyPair keyPair = generator.generateKeyPair();
+        SM9EncMasterPrivateKeyParameters masterPrivate = (SM9EncMasterPrivateKeyParameters) keyPair.getPrivate();
+        SM9EncMasterPublicKeyParameters masterPublic = masterPrivate.getPublicKeyParameters();
+        byte[] identity = "alice".getBytes(StandardCharsets.UTF_8);
+        SM9EncPrivateKeyParameters userKey = masterPrivate.generateUserKey(identity, SM9EncMasterPrivateKeyParameters.HID);
+
+        Map<String, String> properties = new HashMap<>();
+        properties.put("smcrypt.sm9.private-key", Base64.getEncoder().encodeToString(userKey.getEncoded()));
+        properties.put("smcrypt.sm9.master-public-key", Base64.getEncoder().encodeToString(masterPublic.getEncoded()));
+        properties.put("smcrypt.sm9.identity", "alice");
+        if (mode != null) {
+            properties.put("smcrypt.sm9.mode", mode);
+        }
+        if (cipherFormat != null) {
+            properties.put("smcrypt.sm9.cipher-format", cipherFormat);
+        }
+        return properties;
     }
 
     private static KeyPair ecKeyPair(String curve) throws Exception {

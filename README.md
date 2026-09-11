@@ -19,12 +19,13 @@
 - [八、支持的算法](#八支持的算法)
 - [九、密钥配置](#九密钥配置)
 - [十、配置项参考](#十配置项参考)
-- [十一、自定义算法 / 加密机接入](#十一自定义算法--加密机接入)
-- [十二、加密工具](#十二加密工具)
-- [十三、日志](#十三日志)
-- [十四、注意事项与常见问题](#十四注意事项与常见问题)
-- [十五、构建与测试](#十五构建与测试)
-- [十六、许可证](#十六许可证)
+- [十一、SM9 标识加密](#十一sm9-标识加密)
+- [十二、自定义算法 / 加密机接入](#十二自定义算法--加密机接入)
+- [十三、加密工具](#十三加密工具)
+- [十四、日志](#十四日志)
+- [十五、注意事项与常见问题](#十五注意事项与常见问题)
+- [十六、构建与测试](#十六构建与测试)
+- [十七、许可证](#十七许可证)
 
 ---
 
@@ -43,14 +44,14 @@
 
 - **零侵入**：业务代码照常使用 `@Value`、`Environment`、`@ConfigurationProperties`，无需感知密文；
 - **多版本兼容**：同一套核心逻辑，分别适配 Spring Boot 2 / 3 / 4；
-- **多算法**：内置国密 SM2 / SM4 及 AES / DES / DESEDE (3DES) / RSA / ECC；
+- **多算法**：内置国密 SM2 / SM4 / SM9 (标识加密) 及 AES / DES / DESEDE (3DES) / RSA / ECC；
 - **多编码**：支持 hex、Base64，可显式声明或自动识别；
 - **可扩展**：业务系统可通过 SPI 接入自定义算法，或对接加密机（HSM）等外部解密能力。
 
 ## 二、核心特性
 
 - 同时支持 Spring Boot 2 / 3 / 4，按版本选用对应 Starter；
-- 内置算法：SM4、SM2、AES、DES、DESEDE (3DES)、RSA、ECC（ECIES），基于 BouncyCastle；
+- 内置算法：SM4、SM2、SM9（标识加密）、AES、DES、DESEDE (3DES)、RSA、ECC（ECIES），基于 BouncyCastle；
 - 密文编码支持 hex 与 Base64，可显式声明（`SM4ENC(hex,...)`）或自动识别；
 - 支持 properties、yml/yaml、命令行参数、环境变量等所有 Spring Boot 配置来源；
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
@@ -127,6 +128,7 @@ com.houkunlin.smcrypt
 | Spring Boot 4.x | Java 17+ | `smcrypt-spring-boot4-starter` |
 
 核心模块以 Java 8 编译，BouncyCastle 使用 `jdk15to18` 变体以兼容低版本 JDK。
+SM9 需要 BouncyCastle **1.86 及以上**（本 starter 已使用 1.86）。
 
 ## 六、快速开始
 
@@ -154,7 +156,7 @@ Maven：
 
 ### 2. 生成密文
 
-使用命令行工具生成 SM4 密文（详见 [加密工具](#十二加密工具)）：
+使用命令行工具生成 SM4 密文（详见 [加密工具](#十三加密工具)）：
 
 ```bash
 java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
@@ -234,6 +236,8 @@ public class DemoService {
 | RSA    | `RSAENC(...)`    |
 | ECC    | `ECCENC(...)`    |
 
+> SM9 为标识加密（IBC），前缀为 `SM9ENC(...)`，其配置方式与其它算法不同，单独说明见「十一、SM9 标识加密」。
+
 ## 八、支持的算法
 
 | 算法   | 前缀        | 默认变换                  | 密钥要求             | 说明                             |
@@ -254,6 +258,8 @@ public class DemoService {
 - SM2 密文顺序可通过 `smcrypt.sm2.mode=C1C2C3` 切换；
 - SM2 / ECC 的椭圆曲线由密钥本身决定，无需额外配置；
 - 内置算法均由 BouncyCastle 提供，启动时以显式 Provider 方式使用，不污染全局 JCE Provider。
+
+> SM9 为标识加密（IBC），密钥材料与配置方式与上表不同，单独说明见「十一、SM9 标识加密」。
 
 ## 九、密钥配置
 
@@ -445,7 +451,115 @@ smcrypt.desede.iv=0123456789abcdef
 
 > 3DES 属过时算法，仅建议用于兼容遗留系统密文；新系统请使用 AES 或 SM4。
 
-## 十一、自定义算法 / 加密机接入
+> 以上配置项适用于 SM4 / AES / DES / DESEDE / RSA / ECC 等算法；SM9 的配置项单独见下一节。
+
+## 十一、SM9 标识加密
+
+SM9 是国密 **标识密码（IBC，Identity-Based Cryptography） **算法（GB/T 38635、GM/T 0044），基于 BN 曲线
+上的双线性对。其特点是**公钥即身份**（如邮箱、工号），用户私钥由 KGC（密钥生成中心）用主私钥按身份派生，
+无需数字证书。本 starter 仅集成其中的 **公钥加密 / KEM** 能力，用于解密配置密文。
+
+> 需要 BouncyCastle **1.86 及以上**版本（本 starter 已使用 1.86）。
+> SM9 属小众且强依赖 KGC 的算法，新系统建议优先使用 SM2 或 SM4。
+
+### 11.1 算法与密文格式
+
+- 密文前缀：`SM9ENC(...)`，编码规则与其它算法一致（可显式 `hex,` / `base64,`，缺省自动识别）；
+- 数据封装方式（`smcrypt.sm9.mode`）：
+  - `SM4`（默认）：SM4-ECB / PKCS#7 封装；
+  - `STREAM`：KDF 流（XOR）封装；
+- 密文结构（`smcrypt.sm9.cipher-format`）：
+  - `raw`（默认）：引擎原生 `C1(64) || C3(32) || C2`；
+  - `asn1`：GM/T 0080-2020 的 `SM9Cipher` ASN.1 结构（`enType`：0=STREAM，1=SM4-ECB）。
+
+> 密文格式与封装方式必须与生成密文的一方（GmSSL、铜锁、加密机等）保持一致，否则无法解密。
+
+### 11.2 密钥材料
+
+SM9 的密钥材料包含四项，均需提供：
+
+| 材料            | 说明                                | 长度                          |
+|-----------------|-------------------------------------|-------------------------------|
+| 用户私钥 `de`   | 由 KGC 按身份派生，用于解密         | G2 点，129 字节（`0x04‖x‖y`） |
+| 主公钥 `Ppub-e` | KGC 的主公钥，用于加密与重建私钥    | G1 点，65 字节（`0x04‖x‖y`）  |
+| 身份 `identity` | 用户标识字符串（UTF-8）             | 任意                          |
+| `hid`           | 私钥生成函数标识，KEM / 加密为 `03` | 1 字节                        |
+
+- `de` 与 `Ppub-e` 以 hex 或 Base64 提供；`de` 的编码 **不含**主公钥 / 身份 / hid，因此后三者必须另行配置；
+- 仅需解密时，`de` + `Ppub-e` + `identity` + `hid` 缺一不可（身份参与 KDF 输入，主公钥用于重建私钥）。
+
+### 11.3 配置项
+
+SM9 的配置项独立于其它算法，统一以 `smcrypt.sm9.` 为前缀：
+
+| 配置项                          | 说明                                 | 默认值   |
+|---------------------------------|--------------------------------------|----------|
+| `smcrypt.sm9.private-key`       | 用户私钥 `de`（hex / Base64）        | 无       |
+| `smcrypt.sm9.master-public-key` | 主公钥 `Ppub-e`（hex / Base64）      | 无       |
+| `smcrypt.sm9.identity`          | 身份字符串（UTF-8）                  | 无       |
+| `smcrypt.sm9.hid`               | 私钥生成函数标识（hex，KEM 用 `03`） | `03`     |
+| `smcrypt.sm9.mode`              | 数据封装方式：`SM4` / `STREAM`       | `SM4`    |
+| `smcrypt.sm9.cipher-format`     | 密文格式：`raw` / `asn1`             | `raw`    |
+| `smcrypt.sm9.encoding`          | 加密输出编码：`hex` / `base64`       | `base64` |
+
+> SM9 不使用 `transformation` / `padding` / `iv` 等参数。
+
+### 11.4 配置示例
+
+```properties
+# 用户私钥 de（G2 点，Base64）
+smcrypt.sm9.private-key=BASE64_OF_DE
+# 主公钥 Ppub-e（G1 点，Base64）
+smcrypt.sm9.master-public-key=BASE64_OF_PPUBE
+# 身份
+smcrypt.sm9.identity=alice@example.com
+# 私钥生成函数标识（KEM 默认 03，可省略）
+smcrypt.sm9.hid=03
+# 数据封装方式：SM4（默认）或 STREAM
+smcrypt.sm9.mode=SM4
+# 密文格式：raw（默认）或 asn1
+smcrypt.sm9.cipher-format=raw
+```
+
+```yaml
+smcrypt:
+  sm9:
+    private-key: BASE64_OF_DE
+    master-public-key: BASE64_OF_PPUBE
+    identity: alice@example.com
+    hid: "03"
+    mode: SM4
+    cipher-format: raw
+```
+
+配置完成后，业务代码照常读取被加密的配置项即可（解密在启动早期自动完成）：
+
+```properties
+spring.datasource.password=SM9ENC(base64,xxxxxxxx)
+```
+
+### 11.5 生成密文（API）
+
+命令行工具未提供 SM9 专用参数，可通过 `SmCryptEncryptor` API 或系统属性使用：
+
+```text
+System.setProperty("smcrypt.sm9.private-key","BASE64_OF_DE");
+System.setProperty("smcrypt.sm9.master-public-key","BASE64_OF_PPUBE");
+System.setProperty("smcrypt.sm9.identity","alice@example.com");
+
+SmCryptEncryptor encryptor = new SmCryptEncryptor(new SmCryptContext(System::getProperty, new FileSystemResourceLoader()));
+String cipher = encryptor.encrypt("SM9", "my-secret");
+// 输出形如：SM9ENC(base64,xxxx)
+```
+
+### 11.6 限制
+
+- 需要 BouncyCastle 1.86+；
+- 仅支持数据封装类型 `STREAM` 与 `SM4-ECB`（GM/T 0080 的 SM4-CBC / OFB / CFB 未实现）；
+- 用户私钥无标准 Java / DER / PEM 编码，须按 G2 点裸编码（129 字节）提供；
+- 密钥交换与数字签名不在本 starter 范围内。
+
+## 十二、自定义算法 / 加密机接入
 
 当内置算法无法满足需求（例如需要调用加密机、KMS，或使用未内置的算法）时，业务系统可实现 SPI 接口接入。
 
@@ -530,11 +644,11 @@ public class HsmDecryptHandler implements DecryptHandler, DecryptHandlerAware {
 后加载者覆盖先加载者。因此业务系统注册的同名算法（例如 `SM4`）会覆盖内置实现，便于统一替换为
 加密机等外部实现。
 
-## 十二、加密工具
+## 十三、加密工具
 
 ### API 方式
 
-```java
+```text
 import com.houkunlin.smcrypt.SmCryptContext;
 import com.houkunlin.smcrypt.SmCryptEncryptor;
 import org.springframework.core.io.FileSystemResourceLoader;
@@ -542,8 +656,7 @@ import org.springframework.core.io.FileSystemResourceLoader;
 // 通过系统属性提供密钥
 System.setProperty("smcrypt.sm4.key","0123456789abcdeffedcba9876543210");
 
-SmCryptEncryptor encryptor = new SmCryptEncryptor(
-        new SmCryptContext(System::getProperty, new FileSystemResourceLoader()));
+SmCryptEncryptor encryptor = new SmCryptEncryptor(new SmCryptContext(System::getProperty, new FileSystemResourceLoader()));
 
 // 加密：返回 SM4ENC(base64,xxxx)
 String cipher = encryptor.encrypt("SM4", "hello");
@@ -583,7 +696,7 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
     --decrypt --text "SM4ENC(base64,xxxxxxxx)"
 ```
 
-## 十三、日志
+## 十四、日志
 
 - 解密流程日志统一带 `[SMCRYPT]` 前缀，正常解密会打印属性名、算法、来源；
 - 解密发生在 Spring 全局日志系统初始化之前，因此使用 **独立 LoggerContext**，配置为
@@ -593,7 +706,7 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
   日志上下文在解密结束后即关闭，不会在后台持续滚动；
 - 独立日志初始化失败时自动回退到 `System.out` / `System.err`，保证关键日志不丢失。
 
-## 十四、注意事项与常见问题
+## 十五、注意事项与常见问题
 
 **1. 密钥本身不能是密文。** 密钥在解密阶段被读取，必须为明文（或来自加密机等外部通道）。
 
@@ -616,7 +729,7 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 **7. 编码歧义。** 对无编码前缀且内容恰好同时满足 hex 与 Base64 的密文，建议显式补充编码前缀。
 
-## 十五、构建与测试
+## 十六、构建与测试
 
 ```bash
 ./gradlew build                                   # 全量编译 + 测试 + javadoc
@@ -635,6 +748,6 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
   `spring.factories` 两条路径）、解密引擎对 PropertySource 的替换与来源保留；
 - 各 starter 集成测试：真实启动 `SpringApplication`，验证配置中的密文被解成明文。
 
-## 十六、许可证
+## 十七、许可证
 
 本项目基于 [Mulan Permissive Software License, Version 2](https://license.coscl.org.cn/MulanPSL2) 发布。
