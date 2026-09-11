@@ -1,5 +1,6 @@
 package com.houkunlin.smcrypt;
 
+import com.houkunlin.smcrypt.config.CipherConfig;
 import com.houkunlin.smcrypt.config.KeyDerivationAlgorithm;
 import com.houkunlin.smcrypt.handler.AbstractCipherHandler;
 import com.houkunlin.smcrypt.handler.DecryptHandler;
@@ -99,7 +100,11 @@ public class SmCryptSecurityChecker {
             return;
         }
         String lower = algorithm.toLowerCase(Locale.ROOT);
-        String transformation = handler.resolveConfig().transformation();
+        CipherConfig config = resolveConfig(handler, algorithm, issues);
+        if (config == null) {
+            return;
+        }
+        String transformation = config.transformation();
         if (containsIgnoreCase(transformation, "ECB")) {
             issues.add("算法 " + algorithm + " 使用 ECB 模式（smcrypt." + lower + ".transformation=" + transformation
                     + "），会泄露明文分组规律；建议改用 GCM 或 CBC（CBC 需配置随机且不复用的 IV）");
@@ -120,7 +125,11 @@ public class SmCryptSecurityChecker {
         if (key == null) {
             return;
         }
-        String transformation = handler.resolveConfig().transformation();
+        CipherConfig config = resolveConfig(handler, "RSA", issues);
+        if (config == null) {
+            return;
+        }
+        String transformation = config.transformation();
         if (containsIgnoreCase(transformation, "PKCS1")) {
             issues.add("算法 RSA 使用 PKCS#1 v1.5 填充（transformation=" + transformation
                     + "），存在填充预言风险；建议改用 OAEP，例如 "
@@ -154,6 +163,11 @@ public class SmCryptSecurityChecker {
             return;
         }
         if ("JCE".equalsIgnoreCase(property(context, "smcrypt.pbe.mode"))) {
+            String transformation = property(context, "smcrypt.pbe.transformation");
+            if (transformation != null && "PBEWITHMD5ANDDES".equals(normalize(transformation))) {
+                issues.add("PBE（JCE 模式）使用不安全的 PBEWithMD5AndDES；建议改用 PBEWITHHMACSHA512ANDAES_256，"
+                        + "或 KDF 模式 + AES-GCM");
+            }
             int iterations = intProperty(context, "smcrypt.pbe.iterations", MIN_JCE_ITERATIONS);
             if (iterations < MIN_JCE_ITERATIONS) {
                 issues.add("PBE（JCE 模式）迭代次数 " + iterations + " 低于建议值 " + MIN_JCE_ITERATIONS);
@@ -163,7 +177,13 @@ public class SmCryptSecurityChecker {
         if (property(context, "smcrypt.pbe.kdf.salt") != null) {
             issues.add("PBE（KDF 模式）配置了固定盐 smcrypt.pbe.kdf.salt；盐应随机生成并内嵌到密文，建议移除该配置");
         }
-        KeyDerivationAlgorithm kdf = KeyDerivationAlgorithm.fromToken(property(context, "smcrypt.pbe.kdf"));
+        KeyDerivationAlgorithm kdf;
+        try {
+            kdf = KeyDerivationAlgorithm.fromToken(property(context, "smcrypt.pbe.kdf"));
+        } catch (RuntimeException e) {
+            issues.add("PBE 配置无法解析，请检查 smcrypt.pbe.kdf：" + e.getMessage());
+            return;
+        }
         if (kdf == null) {
             kdf = KeyDerivationAlgorithm.PBKDF2;
         }
@@ -203,6 +223,27 @@ public class SmCryptSecurityChecker {
         if (transformation != null && "PBEWITHMD5ANDDES".equals(normalize(transformation))) {
             issues.add("Jasypt 使用不安全的 PBEWithMD5AndDES；建议重加密为 PBEWITHHMACSHA512ANDAES_256，"
                     + "或改用 PBEENC + AES-GCM");
+        }
+    }
+
+    /**
+     * 解析算法配置，解析失败时记录为一条问题并返回 null
+     *
+     * <p>体检为附加能力，不应改变原有「配置非法时才在解密阶段报错」的语义：这里捕获解析异常，
+     * 在 {@code strict=warn} 时仅告警，在 {@code strict=fail} 时作为问题阻断启动。</p>
+     *
+     * @param handler   算法处理器
+     * @param algorithm 算法名称
+     * @param issues    问题列表
+     * @return 算法配置；解析失败时返回 null
+     */
+    private static CipherConfig resolveConfig(AbstractCipherHandler handler, String algorithm, List<String> issues) {
+        try {
+            return handler.resolveConfig();
+        } catch (RuntimeException e) {
+            issues.add("算法 " + algorithm + " 的配置无法解析，请检查 smcrypt."
+                    + algorithm.toLowerCase(Locale.ROOT) + ".*：" + e.getMessage());
+            return null;
         }
     }
 

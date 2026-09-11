@@ -142,7 +142,7 @@ public class CipherConfig {
             encodingValue = defaultEncoding;
         }
 
-        if (transformationValue == null && modeValue != null) {
+        if (transformationValue == null && modeValue != null && !isCipherOrderAlgorithm(algorithm)) {
             String actualPadding = paddingValue != null ? paddingValue : "PKCS5Padding";
             transformationValue = jceAlgorithm + TRANSFORMATION_SEPARATOR + modeValue
                     + TRANSFORMATION_SEPARATOR + actualPadding;
@@ -183,6 +183,19 @@ public class CipherConfig {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /**
+     * 判断算法是否使用 {@code mode} 表示密文顺序而非加密模式
+     *
+     * <p>SM2 的 {@code mode} 用于选择密文顺序（{@code C1C3C2} / {@code C1C2C3}），不参与 JCE
+     * 变换串拼接，避免拼出无意义的变换串（如 {@code SM2/C1C2C3/PKCS5Padding}）。</p>
+     *
+     * @param algorithm 算法名称
+     * @return 使用 mode 表示密文顺序时返回 true
+     */
+    private static boolean isCipherOrderAlgorithm(String algorithm) {
+        return "SM2".equalsIgnoreCase(algorithm);
     }
 
     /**

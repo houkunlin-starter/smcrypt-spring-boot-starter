@@ -23,6 +23,9 @@ import java.util.Map;
  * // SM4ENC(base64,....)
  * }</pre>
  *
+ * <p><b>线程安全：</b>本类内部处理器会缓存解析出的算法配置与密钥，因此**非线程安全**，
+ * 请勿在多线程间共享同一实例；如需并发使用，请为每个线程创建独立实例。</p>
+ *
  * @author HouKunLin
  */
 public class SmCryptEncryptor {

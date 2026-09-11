@@ -65,6 +65,21 @@ class SmCryptSecurityCheckerTest {
     }
 
     @Test
+    void detectsPbeJceWeakTransformation() {
+        Map<String, String> properties = singleton("smcrypt.pbe.password", "pw");
+        properties.put("smcrypt.pbe.mode", "JCE");
+        properties.put("smcrypt.pbe.transformation", "PBEWithMD5AndDES");
+        assertIssue(properties, "PBEWithMD5AndDES");
+    }
+
+    @Test
+    void recordsIssueInsteadOfThrowingOnInvalidConfig() {
+        Map<String, String> properties = singleton("smcrypt.aes.key", KEY_16);
+        properties.put("smcrypt.aes.mac", "bogus");
+        assertIssue(properties, "无法解析");
+    }
+
+    @Test
     void noIssuesForSafeConfig() {
         Map<String, String> properties = singleton("smcrypt.aes.key", KEY_16);
         properties.put("smcrypt.aes.transformation", "AES/GCM/NoPadding");

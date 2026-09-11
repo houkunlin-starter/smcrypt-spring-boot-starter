@@ -62,6 +62,18 @@ class CipherConfigTest {
     }
 
     @Test
+    void sm2ModeDoesNotBuildTransformation() {
+        Map<String, String> properties = new HashMap<>();
+        properties.put("smcrypt.sm2.mode", "C1C2C3");
+
+        CipherConfig config = CipherConfig.resolve("SM2", "SM2", properties::get,
+                "SM2", CipherEncoding.BASE64);
+
+        assertEquals("SM2", config.transformation());
+        assertEquals("C1C2C3", config.mode());
+    }
+
+    @Test
     void defaultTransformationUsedWhenModeNotConfigured() {
         CipherConfig config = CipherConfig.resolve("AES", "AES", EMPTY_PROPERTIES::get,
                 "AES/ECB/PKCS5Padding", CipherEncoding.BASE64);

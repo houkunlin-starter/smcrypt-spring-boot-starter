@@ -25,6 +25,8 @@ public class Main {
 }
 ```
 
+> 线程安全：`SmCryptEncryptor` 内部处理器会缓存解析出的配置与密钥， **非线程安全**；请勿多线程共享同一实例，如需并发请为每个线程创建独立实例。
+
 ## 生成密钥
 
 API 方式（`com.houkunlin.smcrypt.key.SmCryptKeyGenerator`）：

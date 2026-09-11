@@ -111,6 +111,17 @@ class SmCryptDecryptorTest {
     }
 
     @Test
+    void strictWarnDoesNotThrowOnInvalidConfig() {
+        StandardEnvironment environment = new StandardEnvironment();
+        Map<String, Object> source = new HashMap<>();
+        source.put("smcrypt.sm4.key", SM4_KEY);
+        source.put("smcrypt.sm4.mac", "bogus");
+        source.put("smcrypt.strict", "warn");
+        environment.getPropertySources().addFirst(new MapPropertySource("testSource", source));
+        assertDoesNotThrow(() -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
+    }
+
+    @Test
     void strictOffSkipsCheck() {
         StandardEnvironment environment = new StandardEnvironment();
         environment.getPropertySources().addFirst(new MapPropertySource("testSource", weakConfigSource("off")));
