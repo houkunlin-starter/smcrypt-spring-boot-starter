@@ -1,7 +1,5 @@
 package com.houkunlin.smcrypt;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -20,11 +18,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author HouKunLin
  */
 public final class SmCryptLog {
-    /**
-     * 回退输出时的时间格式
-     */
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-
     /**
      * 当前活动的早期日志上下文；为 null 时回退到控制台输出
      */
@@ -95,15 +88,13 @@ public final class SmCryptLog {
     /**
      * 统一日志输出入口
      *
-     * <p>仅当早期独立日志上下文不可用（例如命令行工具场景）时才回退到
-     * {@code System.out}/{@code System.err}，属于最后兜底输出，并非常规日志打印，
-     * 因此抑制 SonarQube 规则 {@code java:S106}。</p>
+     * <p>存在活动日志上下文时委托给 {@link SmCryptLogback#logMessage}；否则回退到
+     * {@link SmCryptLogFormatter#printFallback} 的控制台兜底输出（例如命令行工具场景）。</p>
      *
      * @param level  日志级别
      * @param format 日志格式
      * @param args   占位符参数
      */
-    @SuppressWarnings("java:S106")
     private static void log(LogLevel level, String format, Object... args) {
         SmCryptLogback logback = ACTIVE.get();
         if (logback != null) {
@@ -111,56 +102,6 @@ public final class SmCryptLog {
             return;
         }
         // 无活动日志上下文（例如命令行工具）：回退到控制台输出，确保异常不被静默丢弃
-        String message = formatMessage(format, args);
-        Throwable throwable = lastThrowable(args);
-        String line = TIME_FORMATTER.format(LocalDateTime.now()) + " [" + level.name() + "] " + message;
-        if (level == LogLevel.ERROR || level == LogLevel.WARN) {
-            System.err.println(line);
-            if (throwable != null) {
-                throwable.printStackTrace(System.err);
-            }
-        } else {
-            System.out.println(line);
-            if (throwable != null) {
-                throwable.printStackTrace(System.out);
-            }
-        }
-    }
-
-    /**
-     * 解析 {@code {}} 占位符并拼接日志文本（不包含尾部异常参数）
-     *
-     * @param format 日志格式
-     * @param args   占位符参数
-     * @return 拼接后的日志文本
-     */
-    private static String formatMessage(String format, Object... args) {
-        StringBuilder message = new StringBuilder();
-        int argIndex = 0;
-        int index = 0;
-        while (index < format.length()) {
-            if (format.charAt(index) == '{' && index + 1 < format.length() && format.charAt(index + 1) == '}'
-                    && argIndex < args.length && !(args[argIndex] instanceof Throwable)) {
-                message.append(args[argIndex++]);
-                index += 2;
-            } else {
-                message.append(format.charAt(index));
-                index++;
-            }
-        }
-        return message.toString();
-    }
-
-    /**
-     * 获取参数列表末尾的异常对象（SLF4J 风格的尾部异常）
-     *
-     * @param args 日志参数
-     * @return 末尾的异常对象；不存在时返回 null
-     */
-    private static Throwable lastThrowable(Object... args) {
-        if (args.length > 0 && args[args.length - 1] instanceof Throwable) {
-            return (Throwable) args[args.length - 1];
-        }
-        return null;
+        SmCryptLogFormatter.printFallback(level, format, args);
     }
 }

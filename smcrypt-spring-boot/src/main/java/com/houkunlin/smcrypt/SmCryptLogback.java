@@ -12,8 +12,6 @@ import org.springframework.core.io.Resource;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 启动早期独立日志工具。
@@ -28,11 +26,6 @@ import java.time.format.DateTimeFormatter;
  * @author HouKunLin
  */
 public class SmCryptLogback {
-    /**
-     * 日志输出时间格式
-     */
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-
     /**
      * 启动早期日志配置文件（候选位置）
      * <p>
@@ -245,17 +238,13 @@ public class SmCryptLogback {
      * 日志输出统一入口
      * <p>
      * 本类独立日志上下文初始化成功（{@link #loggingReady} 为 true 且 {@link #log} 非空）时，
-     * 走独立 LoggerContext；否则回退到 {@link System#out}/{@link System#err}，输出带时间戳与
-     * {@code [级别]} 前缀的文本，保证解密流程的关键日志不丢失。
-     * <p>
-     * 该回退是日志配置文件缺失或独立上下文初始化失败时的最后兜底，并非常规日志打印，
-     * 因此抑制 SonarQube 规则 {@code java:S106}。
+     * 走独立 LoggerContext；否则回退到 {@link SmCryptLogFormatter#printFallback} 的控制台兜底输出，
+     * 保证解密流程的关键日志不丢失。
      *
      * @param level  日志级别
      * @param format 日志格式（支持 {@code {}} 占位符）
      * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则追加堆栈输出
      */
-    @SuppressWarnings("java:S106")
     public void logMessage(LogLevel level, String format, Object... args) {
         if (loggingReady && log != null) {
             switch (level) {
@@ -282,44 +271,6 @@ public class SmCryptLogback {
             return;
         }
         // 回退输出：解析 {} 占位符并打印到控制台
-        StringBuilder message = new StringBuilder();
-        int argIndex = 0;
-        int index = 0;
-        while (index < format.length()) {
-            if (format.charAt(index) == '{' && index + 1 < format.length() && format.charAt(index + 1) == '}'
-                    && argIndex < args.length) {
-                message.append(args[argIndex++]);
-                index += 2;
-            } else {
-                message.append(format.charAt(index));
-                index++;
-            }
-        }
-        Throwable throwable = getThrowable(args);
-        String line = TIME_FORMATTER.format(LocalDateTime.now()) + " [" + level.name() + "] " + message;
-        if (level == LogLevel.ERROR) {
-            System.err.println(line);
-            if (throwable != null) {
-                throwable.printStackTrace(System.err);
-            }
-        } else {
-            System.out.println(line);
-        }
-    }
-
-    /**
-     * 获取参数列表末尾的异常对象
-     *
-     * @param args 日志参数
-     * @return 末尾的异常对象；不存在时返回 null
-     */
-    private Throwable getThrowable(Object... args) {
-        if (args.length > 0) {
-            Object last = args[args.length - 1];
-            if (last instanceof Throwable) {
-                return (Throwable) last;
-            }
-        }
-        return null;
+        SmCryptLogFormatter.printFallback(level, format, args);
     }
 }
