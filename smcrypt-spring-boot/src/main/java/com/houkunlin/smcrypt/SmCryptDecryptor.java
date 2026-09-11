@@ -6,10 +6,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.OriginTrackedMapPropertySource;
 import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginTrackedValue;
+import org.springframework.boot.origin.TextResourceOrigin;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.Resource;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,13 +42,11 @@ public class SmCryptDecryptor {
     /**
      * 解密成功日志格式
      */
-    private static final String LOG_DECRYPTED =
-            "[SMCRYPT] 配置类型：{}，解密配置属性：{}，算法：{}，配置来源：{}";
+    private static final String LOG_DECRYPTED = "[SMCRYPT] 配置类型：{}，配置来源：{}，算法：{}，成功解密配置属性：{}";
     /**
      * 解密失败日志格式
      */
-    private static final String LOG_DECRYPT_FAILED =
-            "[SMCRYPT] 配置类型：{}，无法解密配置属性: {}，算法：{}，原始值: {}，配置来源：{}";
+    private static final String LOG_DECRYPT_FAILED = "[SMCRYPT] 配置类型：{}，配置来源：{}，算法：{}，无法解密配置属性: {}，原始值: {}";
 
     /**
      * 执行配置文件密文解密
@@ -111,6 +111,7 @@ public class SmCryptDecryptor {
                 continue;
             }
             String value = (String) raw;
+            String sourceName = source.getName();
             try {
                 String decryptedValue = handler.getDecryptText(value);
                 Origin origin = source.getOrigin(name);
@@ -118,13 +119,18 @@ public class SmCryptDecryptor {
                     decrypted.put(name, OriginTrackedValue.of(decryptedValue));
                 } else {
                     decrypted.put(name, OriginTrackedValue.of(decryptedValue, origin));
+                    if (origin instanceof TextResourceOrigin) {
+                        TextResourceOrigin textResourceOrigin = (TextResourceOrigin) origin;
+                        Resource resource = textResourceOrigin.getResource();
+                        if (resource != null) {
+                            sourceName = textResourceOrigin.getResource().getDescription();
+                        }
+                    }
                 }
                 hasEncrypted = true;
-                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED,
-                        simpleName, name, handler.algorithm(), source.getName());
+                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED, simpleName, sourceName, handler.algorithm(), name);
             } catch (Exception e) {
-                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED,
-                        simpleName, name, handler.algorithm(), value, source.getName(), e);
+                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED, simpleName, sourceName, handler.algorithm(), name, value, e);
             }
         }
         if (hasEncrypted) {
@@ -154,15 +160,14 @@ public class SmCryptDecryptor {
                 continue;
             }
             String value = (String) raw;
+            String sourceName = source.getName();
             try {
                 String decryptedValue = handler.getDecryptText(value);
                 decrypted.put(name, decryptedValue);
                 hasEncrypted = true;
-                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED,
-                        simpleName, name, handler.algorithm(), source.getName());
+                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED, simpleName, sourceName, handler.algorithm(), name);
             } catch (Exception e) {
-                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED,
-                        simpleName, name, handler.algorithm(), value, source.getName(), e);
+                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED, simpleName, sourceName, handler.algorithm(), name, value, e);
             }
         }
         if (hasEncrypted) {
