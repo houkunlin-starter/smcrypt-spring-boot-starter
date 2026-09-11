@@ -30,6 +30,15 @@ class SmCryptCliTest {
         assertTrue(output.contains("smcrypt.sm9.identity=alice@example.com"));
     }
 
+    @Test
+    void pbeRoundTrip() {
+        String cipher = run("--algorithm", "PBE", "--password", "pbe-pw", "--pbe-mode", "KDF",
+                "--transformation", "AES/GCM/NoPadding", "--text", "pbe-hello");
+        String plain = run("--algorithm", "PBE", "--password", "pbe-pw", "--pbe-mode", "KDF",
+                "--transformation", "AES/GCM/NoPadding", "--decrypt", "--text", cipher.trim());
+        assertEquals("pbe-hello", plain.trim());
+    }
+
     private static String run(String... args) {
         PrintStream original = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();

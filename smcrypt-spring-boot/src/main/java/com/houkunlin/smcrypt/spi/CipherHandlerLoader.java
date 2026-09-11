@@ -3,6 +3,8 @@ package com.houkunlin.smcrypt.spi;
 import com.houkunlin.smcrypt.SmCryptContext;
 import com.houkunlin.smcrypt.SmCryptLog;
 import com.houkunlin.smcrypt.handler.*;
+import com.houkunlin.smcrypt.pbe.JasyptCipherHandler;
+import com.houkunlin.smcrypt.pbe.PbeCipherHandler;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 
 import java.util.*;
@@ -12,7 +14,7 @@ import java.util.*;
  *
  * <p>按以下顺序加载处理器并注入上下文：</p>
  * <ol>
- *     <li>内置处理器（SM4、SM2、SM9、AES、DES、DESEDE、ChaCha20、GOST3412、DSTU7624、RC6、Camellia、ARIA、SEED、RSA、ECC）；</li>
+ *     <li>内置处理器（SM4、SM2、SM9、AES、DES、DESEDE、ChaCha20、GOST3412、DSTU7624、RC6、Camellia、ARIA、SEED、RSA、ECC、PBE、JASYPT）；</li>
  *     <li>通过 {@link ServiceLoader}（{@code META-INF/services}）注册的处理器；</li>
  *     <li>通过 {@link SpringFactoriesLoader}（{@code spring.factories}）注册的处理器。</li>
  * </ol>
@@ -69,7 +71,9 @@ public class CipherHandlerLoader {
                 new AriaHandler(),
                 new SeedHandler(),
                 new RsaHandler(),
-                new EccHandler());
+                new EccHandler(),
+                new PbeCipherHandler(),
+                new JasyptCipherHandler());
     }
 
     /**

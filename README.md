@@ -21,12 +21,13 @@
 - [九、密钥配置](#九密钥配置)
 - [十、配置项参考](#十配置项参考)
 - [十一、SM9 标识加密](#十一sm9-标识加密)
-- [十二、自定义算法 / 加密机接入](#十二自定义算法--加密机接入)
-- [十三、加密工具](#十三加密工具)
-- [十四、日志](#十四日志)
-- [十五、注意事项与常见问题](#十五注意事项与常见问题)
-- [十六、构建与测试](#十六构建与测试)
-- [十七、许可证](#十七许可证)
+- [十二、口令派生（PBE）与 Jasypt 兼容](#十二口令派生pbe与-jasypt-兼容)
+- [十三、自定义算法 / 加密机接入](#十三自定义算法--加密机接入)
+- [十四、加密工具](#十四加密工具)
+- [十五、日志](#十五日志)
+- [十六、注意事项与常见问题](#十六注意事项与常见问题)
+- [十七、构建与测试](#十七构建与测试)
+- [十八、许可证](#十八许可证)
 
 ---
 
@@ -61,6 +62,7 @@
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
 - 解密失败仅记录日志并跳过该属性，不会导致整个应用启动崩溃；
 - 保留 SPI 扩展接口，业务方可接入自定义算法或加密机，并覆盖内置实现；
+- 支持口令派生（PBE：PBKDF2 / scrypt / Argon2，或 JCE PBE 变换）与 Jasypt 密文兼容（`PBEENC` / `JASYPTENC`）；
 - 提供密钥生成、加密 API 与命令行工具，便于生成密钥与配置密文；
 - 启动早期使用独立日志上下文，不会干扰 Spring Boot 全局日志系统。
 
@@ -249,6 +251,7 @@ public class DemoService {
 | ECC      | `ECCENC(...)`      |
 
 > SM9 为标识加密（IBC），前缀为 `SM9ENC(...)`，其配置方式与其它算法不同，单独说明见「十一、SM9 标识加密」。
+> 口令派生与 Jasypt 兼容的前缀为 `PBEENC(...)` / `JASYPTENC(...)`，见「十二、口令派生（PBE）与 Jasypt 兼容」。
 
 ## 八、支持的算法
 
@@ -668,7 +671,96 @@ String cipher = encryptor.encrypt("SM9", "my-secret");
 - 用户私钥无标准 Java / DER / PEM 编码，须按 G2 点裸编码（129 字节）提供；
 - 密钥交换与数字签名不在本 starter 范围内。
 
-## 十二、自定义算法 / 加密机接入
+## 十二、口令派生（PBE）与 Jasypt 兼容
+
+除了「直接提供密钥」，本 starter 还支持「用口令派生密钥」（PBE）以及兼容 Jasypt 密文。前缀与配置如下：
+
+| 前缀             | 说明                                      | 配置前缀           |
+|------------------|-------------------------------------------|--------------------|
+| `PBEENC(...)`    | 口令派生（KDF + 对称算法）或 JCE PBE 变换 | `smcrypt.pbe.*`    |
+| `JASYPTENC(...)` | 解密 Jasypt 生成的密文                    | `smcrypt.jasypt.*` |
+
+统一载荷：`base64(salt ‖ iv ‖ cipher)`（盐随机内嵌；配置固定盐时不内嵌盐）。
+
+### 12.1 PBEENC：口令派生
+
+`PBEENC(...)` 有两种模式（`smcrypt.pbe.mode`）：
+
+- **KDF（默认）**：口令经 PBKDF2 / scrypt / Argon2 派生密钥，再用 `transformation` 指定的对称算法加密；
+- **JCE**：直接使用 JCE PBE 变换（如 `PBEWITHHMACSHA512ANDAES_256`），由 JVM 默认 Provider（SunJCE）执行。
+
+| 配置项                                                              | mode | 说明                                                | 默认                          |
+|---------------------------------------------------------------------|------|-----------------------------------------------------|-------------------------------|
+| `smcrypt.pbe.password`                                              | 全部 | 口令（必填）                                        | 无                            |
+| `smcrypt.pbe.mode`                                                  | 全部 | `KDF` / `JCE`                                       | `KDF`                         |
+| `smcrypt.pbe.encoding`                                              | 全部 | 载荷编码                                            | `base64`                      |
+| `smcrypt.pbe.transformation`                                        | KDF  | 对称加密变换串                                      | `AES/GCM/NoPadding`           |
+| `smcrypt.pbe.kdf`                                                   | KDF  | `PBKDF2` / `SCRYPT` / `ARGON2`                      | `PBKDF2`                      |
+| `smcrypt.pbe.kdf.prf`                                               | KDF  | PBKDF2 PRF：`HmacSHA256` / `HmacSHA512` / `HmacSM3` | `HmacSHA256`                  |
+| `smcrypt.pbe.kdf.iterations`                                        | KDF  | 迭代次数                                            | `600000`（Argon2 为 3）       |
+| `smcrypt.pbe.kdf.key-length`                                        | KDF  | 派生密钥位数                                        | 按算法                        |
+| `smcrypt.pbe.kdf.salt`                                              | KDF  | 固定盐（hex / Base64）；不配则随机内嵌              | 无（随机内嵌）                |
+| `smcrypt.pbe.kdf.salt-size`                                         | KDF  | 随机盐长度                                          | `16`                          |
+| `smcrypt.pbe.kdf.cost` / `.block-size` / `.parallelism` / `.memory` | KDF  | scrypt / Argon2 参数                                | `65536` / `8` / `1` / `65536` |
+| `smcrypt.pbe.transformation`                                        | JCE  | JCE PBE 变换串                                      | `PBEWITHHMACSHA512ANDAES_256` |
+| `smcrypt.pbe.iterations`                                            | JCE  | 迭代次数                                            | `1000`                        |
+| `smcrypt.pbe.salt-size` / `.iv-size`                                | JCE  | 盐 / IV 长度（0=无 IV）                             | 分组大小                      |
+| `smcrypt.pbe.provider`                                              | JCE  | Provider 名                                         | JVM 默认（SunJCE）            |
+
+示例（KDF + AES-GCM，推荐）：
+
+```properties
+smcrypt.pbe.password=my-passphrase
+smcrypt.pbe.mode=KDF
+smcrypt.pbe.transformation=AES/GCM/NoPadding
+smcrypt.pbe.kdf=PBKDF2
+smcrypt.pbe.kdf.iterations=600000
+# 业务配置
+spring.datasource.password=PBEENC(base64,xxxxxxxx)
+```
+
+示例（JCE PBE 变换）：
+
+```properties
+smcrypt.pbe.password=my-passphrase
+smcrypt.pbe.mode=JCE
+smcrypt.pbe.transformation=PBEWITHHMACSHA512ANDAES_256
+```
+
+> `PBEENC(...)` 的盐默认随机内嵌，因此同一明文每次加密结果不同；解密端只需相同口令与参数即可还原。
+> 若配置固定盐（`smcrypt.pbe.kdf.salt`），则密文不含盐，需保证加解密两端盐一致。
+
+### 12.2 JASYPTENC：Jasypt 兼容
+
+Jasypt 的密文为 `ENC(base64(salt ‖ iv ‖ cipher))`。迁移到本项目只需把前缀 `ENC(` 改为 `JASYPTENC(`，内层与口令保持不变即可解密：
+
+```properties
+# Jasypt 原密文：secret=ENC(nrmZtkF7T0kjG/VodDvBw93Ct8EgjCA+)
+# 迁移后：
+secret=JASYPTENC(nrmZtkF7T0kjG/VodDvBw93Ct8EgjCA+)
+smcrypt.jasypt.password=my-jasypt-password
+```
+
+| 配置项                                  | 说明                    | 默认                          |
+|-----------------------------------------|-------------------------|-------------------------------|
+| `smcrypt.jasypt.password`               | Jasypt 口令             | 无                            |
+| `smcrypt.jasypt.transformation`         | Jasypt 算法             | `PBEWITHHMACSHA512ANDAES_256` |
+| `smcrypt.jasypt.iterations`             | 迭代次数                | `1000`                        |
+| `smcrypt.jasypt.salt-size` / `.iv-size` | 盐 / IV 长度（0=无 IV） | `16` / `16`                   |
+| `smcrypt.jasypt.provider`               | Provider 名             | JVM 默认（SunJCE）            |
+| `smcrypt.jasypt.encoding`               | 内层编码                | `base64`                      |
+
+> Jasypt 旧默认算法 `PBEWithMD5AndDES` 不安全；若既有密文使用它，建议尽快重加密为 `PBEWITHHMACSHA512ANDAES_256` 或本项目的
+> `PBEENC` + AES-GCM。
+
+### 12.3 安全建议
+
+- 优先使用 `PBEENC` + `mode=KDF` + `AES/GCM/NoPadding` + `Argon2id`（或 PBKDF2 ≥ 600000 次）；
+- 盐保持随机内嵌，勿固定；
+- 口令通过环境变量 / JVM 参数提供，勿写入配置文件；
+- `mode=JCE` 与 `JASYPTENC` 主要用于互操作 / 兼容。
+
+## 十三、自定义算法 / 加密机接入
 
 当内置算法无法满足需求（例如需要调用加密机、KMS，或使用未内置的算法）时，业务系统可实现 SPI 接口接入。
 
@@ -753,7 +845,7 @@ public class HsmDecryptHandler implements DecryptHandler, DecryptHandlerAware {
 后加载者覆盖先加载者。因此业务系统注册的同名算法（例如 `SM4`）会覆盖内置实现，便于统一替换为
 加密机等外部实现。
 
-## 十三、加密工具
+## 十四、加密工具
 
 ### API 方式
 
@@ -836,22 +928,28 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 参数说明：
 
-| 参数               | 简写 | 说明                                                                                                                                                     |
-|--------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `CAMELLIA` / `ARIA` / `SEED` / `RSA` / `ECC` |
-| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                                                            |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                                                           |
-| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                                                   |
-| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                                                          |
-| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                                                |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                                                      |
-| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                                                            |
-| `--iv`             |      | 初始向量（hex / Base64）                                                                                                                                 |
-| `--decrypt`        |      | 解密模式                                                                                                                                                 |
-| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                                                   |
-| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                                                                                                     |
-| `--identity`       |      | SM9 生成密钥时的身份                                                                                                                                     |
-| `--help`           | `-h` | 显示帮助                                                                                                                                                 |
+| 参数               | 简写 | 说明                                                                                                                                                                        |
+|--------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `CAMELLIA` / `ARIA` / `SEED` / `RSA` / `ECC` / `PBE` / `JASYPT` |
+| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                                                                               |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                                                                              |
+| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                                                                      |
+| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                                                                             |
+| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                                                                   |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                                                                         |
+| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                                                                               |
+| `--iv`             |      | 初始向量（hex / Base64）                                                                                                                                                    |
+| `--password`       |      | 口令派生 / Jasypt 兼容的口令                                                                                                                                                |
+| `--kdf`            |      | KDF 算法：`PBKDF2` / `SCRYPT` / `ARGON2`（PBE，默认 `PBKDF2`）                                                                                                              |
+| `--kdf-iterations` |      | KDF 迭代次数（PBE）                                                                                                                                                         |
+| `--salt`           |      | KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）                                                                                                                             |
+| `--pbe-mode`       |      | PBE 模式：`KDF`（默认）/ `JCE`                                                                                                                                              |
+| `--iterations`     |      | JCE PBE 迭代次数（默认 `1000`）                                                                                                                                             |
+| `--decrypt`        |      | 解密模式                                                                                                                                                                    |
+| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                                                                      |
+| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                                                                                                                        |
+| `--identity`       |      | SM9 生成密钥时的身份                                                                                                                                                        |
+| `--help`           | `-h` | 显示帮助                                                                                                                                                                    |
 
 解密示例：
 
@@ -861,7 +959,7 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
     --decrypt --text "SM4ENC(base64,xxxxxxxx)"
 ```
 
-## 十四、日志
+## 十五、日志
 
 - 解密引擎的关键日志带 `[SMCRYPT]` 前缀，正常解密会打印属性名、算法、来源；密钥解析、SPI 加载等辅助类的告警/调试日志不带该前缀；
 - 解密发生在 Spring 全局日志系统初始化之前，因此使用 **独立 LoggerContext**，配置为
@@ -871,7 +969,7 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
   日志上下文在解密结束后即关闭，不会在后台持续滚动；
 - 独立日志初始化失败时自动回退到 `System.out` / `System.err`，保证关键日志不丢失。
 
-## 十五、注意事项与常见问题
+## 十六、注意事项与常见问题
 
 **1. 密钥本身不能是密文。** 密钥在解密阶段被读取，必须为明文（或来自加密机等外部通道）。
 
@@ -894,7 +992,7 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 **7. 编码歧义。** 对无编码前缀且内容恰好同时满足 hex 与 Base64 的密文，建议显式补充编码前缀。
 
-## 十六、构建与测试
+## 十七、构建与测试
 
 ```bash
 ./gradlew build                                   # 全量编译 + 测试 + javadoc
@@ -910,11 +1008,11 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 测试覆盖：
 
 - 核心单元测试：编解码自动识别、各算法加解密往返（SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 /
-  RC6 / CAMELLIA / ARIA / SEED / RSA / ECC）、
+  RC6 / CAMELLIA / ARIA / SEED / RSA / ECC）、口令派生（PBKDF2 / scrypt / Argon2 与 JCE PBE）与 Jasypt 兼容、
   完整性校验（对称算法 MAC 与非对称算法内置校验的篡改检测）、密钥生成与长度校验、密钥解析、SPI 加载（`META-INF/services` 与
   `spring.factories` 两条路径）、解密引擎对 PropertySource 的替换与来源保留；
 - 各 starter 集成测试：真实启动 `SpringApplication`，验证配置中的密文被解成明文。
 
-## 十七、许可证
+## 十八、许可证
 
 本项目基于 [Mulan Permissive Software License, Version 2](https://license.coscl.org.cn/MulanPSL2) 发布。

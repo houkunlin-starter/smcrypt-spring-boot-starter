@@ -96,6 +96,13 @@ public class SmCryptCli {
         applyOption(options, "padding", PROPERTY_PREFIX + lower + ".padding");
         applyOption(options, "iv", PROPERTY_PREFIX + lower + ".iv");
         applyOption(options, "encoding", PROPERTY_PREFIX + lower + ".encoding");
+        // 口令派生 / Jasypt 兼容（PBE / JASYPT 算法）
+        applyOption(options, "password", PROPERTY_PREFIX + lower + ".password");
+        applyOption(options, "kdf", PROPERTY_PREFIX + lower + ".kdf");
+        applyOption(options, "kdf-iterations", PROPERTY_PREFIX + lower + ".kdf.iterations");
+        applyOption(options, "salt", PROPERTY_PREFIX + lower + ".kdf.salt");
+        applyOption(options, "pbe-mode", PROPERTY_PREFIX + lower + ".mode");
+        applyOption(options, "iterations", PROPERTY_PREFIX + lower + ".iterations");
 
         SmCryptContext context = new SmCryptContext(System::getProperty, new FileSystemResourceLoader());
         SmCryptEncryptor encryptor = new SmCryptEncryptor(context);
@@ -226,7 +233,7 @@ public class SmCryptCli {
     private static void printUsage() {
         System.out.println("用法：SmCryptCli --algorithm <算法> --text <内容> [选项]");
         System.out.println("      SmCryptCli --generate-key --algorithm <算法> [--key-length <位>] [选项]");
-        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED / RSA / ECC");
+        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED / RSA / ECC / PBE / JASYPT");
         System.out.println("  --text, -t        待加密明文；配合 --decrypt 时表示待解密密文");
         System.out.println("  --key, -k         密钥内容（hex / Base64 / PEM）");
         System.out.println("  --file, -f        密钥文件路径（file: 或 classpath:）");
@@ -235,6 +242,12 @@ public class SmCryptCli {
         System.out.println("  --mode            加密模式，如 CBC、GCM、C1C3C2");
         System.out.println("  --padding         填充方式，默认 PKCS5Padding");
         System.out.println("  --iv              初始向量（hex / Base64）");
+        System.out.println("  --password        口令派生 / Jasypt 兼容的口令");
+        System.out.println("  --kdf             KDF 算法：PBKDF2 / SCRYPT / ARGON2（PBE，默认 PBKDF2）");
+        System.out.println("  --kdf-iterations  KDF 迭代次数（PBE）");
+        System.out.println("  --salt            KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）");
+        System.out.println("  --pbe-mode        PBE 模式：KDF（默认）/ JCE");
+        System.out.println("  --iterations      JCE PBE 迭代次数（默认 1000）");
         System.out.println("  --decrypt         解密模式");
         System.out.println("  --generate-key    生成密钥（配合 --algorithm；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）");
         System.out.println("  --key-length      密钥长度（位）：AES/RC6/CAMELLIA/ARIA 128/192/256、DES 56/64、DESEDE 112/168、CHACHA20/GOST3412 256、DSTU7624 128/256/512、SEED 128、RSA 2048/3072、ECC 256/384/521");
