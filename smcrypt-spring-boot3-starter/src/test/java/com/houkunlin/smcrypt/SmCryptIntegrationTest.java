@@ -7,10 +7,15 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.io.FileSystemResourceLoader;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SmCryptIntegrationTest {
     private static final String SM4_KEY = "0123456789abcdeffedcba9876543210";
@@ -32,6 +37,28 @@ class SmCryptIntegrationTest {
         try (ConfigurableApplicationContext context = application.run("--smcrypt.sm4.key=" + SM4_KEY)) {
             assertEquals("hello", context.getEnvironment().getProperty("demo.value"));
         }
+    }
+
+    @Test
+    void writesEarlyLogFile() throws Exception {
+        Path logDir = Paths.get("build/test-logs");
+        Path logFile = logDir.resolve("smcrypt-it.smcrypt.log");
+        Files.deleteIfExists(logFile);
+
+        SpringApplication application = new SpringApplication(TestConfig.class);
+        application.setWebApplicationType(WebApplicationType.NONE);
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("spring.application.name", "smcrypt-it");
+        defaults.put("logging.file.path", logDir.toString());
+        application.setDefaultProperties(defaults);
+
+        try (ConfigurableApplicationContext ignored = application.run()) {
+            // 启动即完成解密并写出早期日志
+        }
+
+        assertTrue(Files.exists(logFile), "应生成早期日志文件：" + logFile.toAbsolutePath());
+        String content = new String(Files.readAllBytes(logFile), StandardCharsets.UTF_8);
+        assertTrue(content.contains("[SMCRYPT]"), "早期日志文件应包含 [SMCRYPT] 日志");
     }
 
     @SpringBootApplication
