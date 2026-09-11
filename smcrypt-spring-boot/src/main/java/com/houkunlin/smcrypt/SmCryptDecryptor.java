@@ -28,9 +28,8 @@ import java.util.Map;
  * <p>工作流程：</p>
  * <ol>
  *     <li>加载全部密文处理器（内置 + 业务通过 SPI 注册的处理器）；</li>
- *     <li>快速判断是否存在可识别的密文，无则跳过；</li>
- *     <li>遍历 {@link MapPropertySource}（含 {@link OriginTrackedMapPropertySource}），
- *         对每个字符串值寻找匹配的处理器并解密；</li>
+ *     <li>单次遍历 {@link MapPropertySource}（含 {@link OriginTrackedMapPropertySource}），
+ *         对每个字符串值寻找匹配的处理器并解密；未发现任何密文则跳过；</li>
  *     <li>替换原 PropertySource，{@link OriginTrackedMapPropertySource} 会保留来源信息。</li>
  * </ol>
  *
@@ -73,18 +72,20 @@ public class SmCryptDecryptor {
             checkSecurity(context, handlers, logback);
             boolean failFast = isFailFast(context);
             MutablePropertySources propertySources = environment.getPropertySources();
-            if (!hasCipherText(propertySources, handlers)) {
-                logback.logMessage(LogLevel.INFO, "[SMCRYPT] 未检测到配置文件中存在加密的配置属性值密文，跳过配置文件解密，可以忽略相关日志提示");
-                return;
-            }
-
             Map<String, PropertySource<?>> replacements = new HashMap<>();
+            boolean cipherTextFound = false;
             for (PropertySource<?> source : propertySources) {
                 if (source instanceof OriginTrackedMapPropertySource) {
-                    handler(replacements, (OriginTrackedMapPropertySource) source, handlers, logback, failFast);
+                    cipherTextFound |= handler(replacements, (OriginTrackedMapPropertySource) source,
+                            handlers, logback, failFast);
                 } else if (source instanceof MapPropertySource) {
-                    handler(replacements, (MapPropertySource) source, handlers, logback, failFast);
+                    cipherTextFound |= handler(replacements, (MapPropertySource) source,
+                            handlers, logback, failFast);
                 }
+            }
+            if (!cipherTextFound) {
+                logback.logMessage(LogLevel.INFO, "[SMCRYPT] 未检测到配置文件中存在加密的配置属性值密文，跳过配置文件解密，可以忽略相关日志提示");
+                return;
             }
             replacements.forEach(propertySources::replace);
 
@@ -110,18 +111,21 @@ public class SmCryptDecryptor {
      * @param handlers     密文处理器列表
      * @param logback      日志工具
      * @param failFast     解密失败时是否中断启动
+     * @return 是否存在可识别的密文（无论解密是否成功）
      */
-    private void handler(Map<String, PropertySource<?>> replacements, OriginTrackedMapPropertySource source,
-                         List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
+    private boolean handler(Map<String, PropertySource<?>> replacements, OriginTrackedMapPropertySource source,
+                            List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
         String simpleName = source.getClass().getSimpleName();
         Map<String, Object> decrypted = new HashMap<>();
         boolean hasEncrypted = false;
+        boolean hasCipherText = false;
         for (String name : source.getPropertyNames()) {
             Object raw = source.getProperty(name);
             DecryptHandler handler = raw instanceof String ? findHandler(handlers, (String) raw) : null;
             if (handler == null) {
                 continue;
             }
+            hasCipherText = true;
             String value = (String) raw;
             String sourceName = source.getName();
             try {
@@ -151,6 +155,7 @@ public class SmCryptDecryptor {
             merged.putAll(decrypted);
             replacements.put(source.getName(), new OriginTrackedMapPropertySource(source.getName(), merged));
         }
+        return hasCipherText;
     }
 
     /**
@@ -161,18 +166,21 @@ public class SmCryptDecryptor {
      * @param handlers     密文处理器列表
      * @param logback      日志工具
      * @param failFast     解密失败时是否中断启动
+     * @return 是否存在可识别的密文（无论解密是否成功）
      */
-    private void handler(Map<String, PropertySource<?>> replacements, MapPropertySource source,
-                         List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
+    private boolean handler(Map<String, PropertySource<?>> replacements, MapPropertySource source,
+                            List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
         String simpleName = source.getClass().getSimpleName();
         Map<String, Object> decrypted = new HashMap<>();
         boolean hasEncrypted = false;
+        boolean hasCipherText = false;
         for (String name : source.getPropertyNames()) {
             Object raw = source.getProperty(name);
             DecryptHandler handler = raw instanceof String ? findHandler(handlers, (String) raw) : null;
             if (handler == null) {
                 continue;
             }
+            hasCipherText = true;
             String value = (String) raw;
             String sourceName = source.getName();
             try {
@@ -190,28 +198,7 @@ public class SmCryptDecryptor {
             merged.putAll(decrypted);
             replacements.put(source.getName(), new MapPropertySource(source.getName(), merged));
         }
-    }
-
-    /**
-     * 检查 PropertySource 集合中是否存在可识别的密文
-     *
-     * @param propertySources 待检查的 PropertySource 集合
-     * @param handlers        密文处理器列表
-     * @return 存在密文属性时返回 true
-     */
-    private boolean hasCipherText(MutablePropertySources propertySources, List<DecryptHandler> handlers) {
-        for (PropertySource<?> propertySource : propertySources) {
-            if (propertySource instanceof MapPropertySource) {
-                MapPropertySource source = (MapPropertySource) propertySource;
-                for (String name : source.getPropertyNames()) {
-                    Object raw = propertySource.getProperty(name);
-                    if (raw instanceof String && findHandler(handlers, (String) raw) != null) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return hasCipherText;
     }
 
     /**
