@@ -98,8 +98,10 @@ public class CipherHandlerLoader {
             for (DecryptHandler handler : ServiceLoader.load(DecryptHandler.class, classLoader)) {
                 handlers.put(key(handler), handler);
             }
-        } catch (Exception e) {
-            // 业务方未注册或注册内容异常时跳过该来源，但记录异常，避免静默失败
+        } catch (ServiceConfigurationError | Exception e) {
+            // 业务方未注册、注册内容异常或 provider 实例化失败时跳过该来源，但记录异常，避免静默失败。
+            // ServiceLoader 在 provider 无法实例化时抛出的是 ServiceConfigurationError（Error 子类），
+            // 必须显式捕获，否则会冒泡中断应用启动。
             SmCryptLog.warn("通过 META-INF/services 加载密文处理器失败，已跳过该来源，不影响内置处理器", e);
         }
     }

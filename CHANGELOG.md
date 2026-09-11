@@ -31,6 +31,8 @@
 - 修复 SM2 的 `mode`（密文顺序）被错误用于拼接 JCE 变换串，产生无意义变换串的问题。
 - 安全体检新增 PBE JCE 模式弱算法（`PBEWithMD5AndDES`）检测。
 - 修复 `.properties` 密钥文件按 ISO-8859-1 解码导致非 ASCII 口令乱码的问题，改为按 UTF-8 读取。
+- 修复通过 `META-INF/services` 加载处理器时，provider 实例化失败抛出的 `ServiceConfigurationError`（`Error` 子类）
+  未被捕获、导致应用启动中断的问题。
 
 ### 文档
 
