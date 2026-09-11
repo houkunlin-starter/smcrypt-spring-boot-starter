@@ -43,6 +43,15 @@ class SmCryptCliTest {
     }
 
     @Test
+    void pbeModeOptionIgnoresGenericMode() {
+        String cipher = run("--algorithm", "PBE", "--password", "pbe-pw", "--mode", "JCE",
+                "--transformation", "AES/GCM/NoPadding", "--text", "pbe-mode");
+        String plain = run("--algorithm", "PBE", "--password", "pbe-pw", "--pbe-mode", "KDF",
+                "--transformation", "AES/GCM/NoPadding", "--decrypt", "--text", cipher.trim());
+        assertEquals("pbe-mode", plain.trim());
+    }
+
+    @Test
     void readsKeyFromStdin() {
         String key = "0123456789abcdeffedcba9876543210";
         String property = "smcrypt.sm4.key";

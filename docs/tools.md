@@ -96,14 +96,14 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 | `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                                                                      |
 | `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                                                                             |
 | `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                                                                   |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                                                                         |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`（PBE 请使用 `--pbe-mode`）                                                                                                              |
 | `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                                                                               |
 | `--iv`             |      | 初始向量（hex / Base64）                                                                                                                                                    |
 | `--password`       |      | 口令派生 / Jasypt 兼容的口令；值为 `-` 时从标准输入读取                                                                                                                     |
 | `--kdf`            |      | KDF 算法：`PBKDF2` / `SCRYPT` / `ARGON2`（PBE，默认 `PBKDF2`）                                                                                                              |
 | `--kdf-iterations` |      | KDF 迭代次数（PBE）                                                                                                                                                         |
 | `--salt`           |      | KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）                                                                                                                             |
-| `--pbe-mode`       |      | PBE 模式：`KDF`（默认）/ `JCE`                                                                                                                                              |
+| `--pbe-mode`       |      | PBE 模式：`KDF`（默认）/ `JCE`（仅 PBE）                                                                                                                                    |
 | `--iterations`     |      | JCE PBE 迭代次数（默认 `1000`）                                                                                                                                             |
 | `--decrypt`        |      | 解密模式                                                                                                                                                                    |
 | `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                                                                      |

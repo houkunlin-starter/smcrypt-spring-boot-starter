@@ -97,22 +97,31 @@ public class SmCryptCli {
         }
 
         String lower = algorithm.toLowerCase(Locale.ROOT);
-        applySecretOption(options, "key", PROPERTY_PREFIX + lower + ".key");
-        applyOption(options, "file", PROPERTY_PREFIX + lower + ".file");
-        applyOption(options, "transformation", PROPERTY_PREFIX + lower + ".transformation");
-        applyOption(options, "mode", PROPERTY_PREFIX + lower + ".mode");
-        applyOption(options, "padding", PROPERTY_PREFIX + lower + ".padding");
-        applyOption(options, "iv", PROPERTY_PREFIX + lower + ".iv");
-        applyOption(options, "encoding", PROPERTY_PREFIX + lower + ".encoding");
-        // 口令派生 / Jasypt 兼容（PBE / JASYPT 算法）
-        applySecretOption(options, "password", PROPERTY_PREFIX + lower + ".password");
-        applyOption(options, "kdf", PROPERTY_PREFIX + lower + ".kdf");
-        applyOption(options, "kdf-iterations", PROPERTY_PREFIX + lower + ".kdf.iterations");
-        applyOption(options, "salt", PROPERTY_PREFIX + lower + ".kdf.salt");
-        applyOption(options, "pbe-mode", PROPERTY_PREFIX + lower + ".mode");
-        applyOption(options, "iterations", PROPERTY_PREFIX + lower + ".iterations");
+        String prefix = PROPERTY_PREFIX + lower + ".";
+        Map<String, String> properties = new LinkedHashMap<>();
+        applySecretOption(options, "key", properties, prefix + "key");
+        applyOption(options, "file", properties, prefix + "file");
+        applyOption(options, "transformation", properties, prefix + "transformation");
+        applyOption(options, "padding", properties, prefix + "padding");
+        applyOption(options, "iv", properties, prefix + "iv");
+        applyOption(options, "encoding", properties, prefix + "encoding");
 
-        SmCryptContext context = new SmCryptContext(System::getProperty, new FileSystemResourceLoader());
+        if ("PBE".equalsIgnoreCase(algorithm)) {
+            // PBE：由 --pbe-mode 指定 KDF/JCE，--mode 不再映射到 smcrypt.pbe.mode，避免语义冲突
+            applySecretOption(options, "password", properties, prefix + "password");
+            applyOption(options, "kdf", properties, prefix + "kdf");
+            applyOption(options, "kdf-iterations", properties, prefix + "kdf.iterations");
+            applyOption(options, "salt", properties, prefix + "kdf.salt");
+            applyOption(options, "pbe-mode", properties, prefix + "mode");
+            applyOption(options, "iterations", properties, prefix + "iterations");
+        } else if ("JASYPT".equalsIgnoreCase(algorithm)) {
+            applySecretOption(options, "password", properties, prefix + "password");
+            applyOption(options, "iterations", properties, prefix + "iterations");
+        } else {
+            applyOption(options, "mode", properties, prefix + "mode");
+        }
+
+        SmCryptContext context = new SmCryptContext(properties::get, new FileSystemResourceLoader());
         SmCryptEncryptor encryptor = new SmCryptEncryptor(context);
         try {
             if (options.containsKey("decrypt")) {
@@ -185,29 +194,33 @@ public class SmCryptCli {
     }
 
     /**
-     * 将命令行选项写入系统属性，供 {@link SmCryptContext} 解析
+     * 将命令行选项写入属性映射，供 {@link SmCryptContext} 解析
      *
-     * @param options  命令行选项
-     * @param option   选项名
-     * @param property 对应的系统属性名
+     * @param options    命令行选项
+     * @param option     选项名
+     * @param properties 属性映射
+     * @param property   对应的属性名
      */
-    private static void applyOption(Map<String, String> options, String option, String property) {
+    private static void applyOption(Map<String, String> options, String option,
+                                    Map<String, String> properties, String property) {
         String value = options.get(option);
         if (value != null && !value.trim().isEmpty()) {
-            System.setProperty(property, value.trim());
+            properties.put(property, value.trim());
         }
     }
 
     /**
-     * 将敏感选项（密钥 / 口令）写入系统属性，供 {@link SmCryptContext} 解析
+     * 将敏感选项（密钥 / 口令）写入属性映射，供 {@link SmCryptContext} 解析
      *
      * <p>当选项值为 {@code -} 时从标准输入读取一行，避免密钥 / 口令出现在进程列表与命令历史中。</p>
      *
-     * @param options  命令行选项
-     * @param option   选项名
-     * @param property 对应的系统属性名
+     * @param options    命令行选项
+     * @param option     选项名
+     * @param properties 属性映射
+     * @param property   对应的属性名
      */
-    private static void applySecretOption(Map<String, String> options, String option, String property) {
+    private static void applySecretOption(Map<String, String> options, String option,
+                                          Map<String, String> properties, String property) {
         String value = options.get(option);
         if (value == null || value.trim().isEmpty()) {
             return;
@@ -220,7 +233,7 @@ public class SmCryptCli {
                 return;
             }
         }
-        System.setProperty(property, value);
+        properties.put(property, value);
     }
 
     /**
@@ -293,14 +306,14 @@ public class SmCryptCli {
         System.out.println("  --file, -f        密钥文件路径（file: 或 classpath:）");
         System.out.println("  --encoding, -e    加密输出编码：hex / base64（默认 base64）");
         System.out.println("  --transformation  自定义 JCE 变换串，如 AES/GCM/NoPadding");
-        System.out.println("  --mode            加密模式，如 CBC、GCM、C1C3C2");
+        System.out.println("  --mode            加密模式，如 CBC、GCM、C1C3C2（PBE 请使用 --pbe-mode）");
         System.out.println("  --padding         填充方式，默认 PKCS5Padding");
         System.out.println("  --iv              初始向量（hex / Base64）");
         System.out.println("  --password        口令派生 / Jasypt 兼容的口令（值为 - 时从标准输入读取）");
         System.out.println("  --kdf             KDF 算法：PBKDF2 / SCRYPT / ARGON2（PBE，默认 PBKDF2）");
         System.out.println("  --kdf-iterations  KDF 迭代次数（PBE）");
         System.out.println("  --salt            KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）");
-        System.out.println("  --pbe-mode        PBE 模式：KDF（默认）/ JCE");
+        System.out.println("  --pbe-mode        PBE 模式：KDF（默认）/ JCE（仅 PBE）");
         System.out.println("  --iterations      JCE PBE 迭代次数（默认 1000）");
         System.out.println("  --decrypt         解密模式");
         System.out.println("  --generate-key    生成密钥（配合 --algorithm；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）");
