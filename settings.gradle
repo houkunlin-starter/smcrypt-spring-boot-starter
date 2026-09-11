@@ -1,0 +1,6 @@
+rootProject.name = 'smcrypt-spring-boot-starter'
+
+include ':smcrypt-spring-boot'
+include ':smcrypt-spring-boot2-starter'
+include ':smcrypt-spring-boot3-starter'
+include ':smcrypt-spring-boot4-starter'

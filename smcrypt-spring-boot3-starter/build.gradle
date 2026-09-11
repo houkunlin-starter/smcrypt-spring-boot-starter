@@ -1,0 +1,37 @@
+plugins {
+    id 'org.springframework.boot' version '3.0.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'io.freefair.lombok' version '8.13.1'
+    id 'org.jreleaser' version '1.26.0'
+    id 'maven-publish'
+    id 'signing'
+    id 'java-library'
+    id 'idea'
+}
+apply from: rootProject.file("publishing.gradle")
+
+dependencies {
+    api project(':smcrypt-spring-boot')
+    compileOnly 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+bootJar {
+    enabled = false
+}
+java {
+    withJavadocJar()
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+jar {
+    enabled = true
+    setArchiveClassifier("")
+}
+

@@ -1,0 +1,77 @@
+plugins {
+    id 'org.jreleaser' version '1.26.0'
+    id 'application'
+    id 'idea'
+}
+
+// 根项目仅作为聚合工程，不发布任何产物，禁用根项目的 jreleaser 任务
+tasks.matching { it.name.startsWith('jreleaser') }.configureEach {
+    enabled = false
+}
+
+allprojects {
+    group = 'com.houkunlin'
+    version = '1.0.0'
+    description = """
+解密 SpringBoot 配置文件中的密文属性值，支持 SM2、SM4、AES、DES、RSA、ECC 等算法与 hex、Base64 编码。
+implementation '${group}:smcrypt-spring-boot2-starter:${version}' build by spring boot 2.7.0 java 8.
+implementation '${group}:smcrypt-spring-boot3-starter:${version}' build by spring boot 3.0.0 java 17.
+implementation '${group}:smcrypt-spring-boot4-starter:${version}' build by spring boot 4.0.0 java 17.
+"""
+
+    repositories {
+        mavenCentral()
+        maven {
+            url = "https://repo1.maven.org/maven2"
+        }
+        maven {
+            url = "https://repo.spring.io/artifactory/libs-milestone-local/"
+        }
+        maven {
+            url = "https://repo.spring.io/artifactory/libs-release-local/"
+        }
+    }
+
+    def isSnapshot = findProperty("snapshot") != null || version.endsWith('SNAPSHOT')
+
+    if (isSnapshot && !version.endsWith('SNAPSHOT')) {
+        version += '-BUILD-SNAPSHOT'
+    }
+
+    idea {
+        module {
+            downloadJavadoc = true
+            downloadSources = true
+        }
+    }
+
+    javadoc {
+        enabled = true
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = "UTF-8"
+        options.charSet = "UTF-8"
+        options.docEncoding = "UTF-8"
+        options.addStringOption('encoding', 'UTF-8')
+        options.addStringOption('Xdoclint:none', '-quiet')
+        // javadoc 需要解析 DictController 等类中的 Swagger/Jackson 注解枚举，补充编译期依赖到 javadoc classpath
+        classpath += configurations.compileClasspath
+    }
+
+    compileJava {
+        options.encoding = "UTF-8"
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.fork = true
+        options.forkOptions.jvmArgs += ['-Dfile.encoding=UTF-8']
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+}

@@ -1,0 +1,35 @@
+plugins {
+    id 'io.freefair.lombok' version '8.13.1'
+    id 'org.jreleaser' version '1.26.0'
+    id 'maven-publish'
+    id 'signing'
+    id 'java-library'
+    id 'idea'
+}
+apply from: rootProject.file("publishing.gradle")
+
+dependencies {
+    // BouncyCastle 提供 SM2/SM4 及 AES/DES/RSA/ECC 算法支持，通过 BOM 统一版本
+    api platform('org.bouncycastle:bc-jdk15to18-bom:1.85.2')
+    api 'org.bouncycastle:bcprov-jdk15to18'
+    api 'org.bouncycastle:bcpkix-jdk15to18'
+
+    compileOnly 'org.slf4j:slf4j-api:2.0.18'
+    compileOnly 'org.springframework.boot:spring-boot:2.7.0'
+    compileOnly 'ch.qos.logback:logback-classic:1.2.13'
+
+    testImplementation 'org.springframework.boot:spring-boot:2.7.0'
+    testImplementation 'ch.qos.logback:logback-classic:1.2.13'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+java {
+    withJavadocJar()
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+compileJava {
+    options.compilerArgs += ['-parameters']
+}
