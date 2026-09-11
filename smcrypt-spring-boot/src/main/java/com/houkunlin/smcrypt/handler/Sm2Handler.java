@@ -22,18 +22,23 @@ import java.security.SecureRandom;
  */
 public class Sm2Handler extends AbstractCipherHandler {
     /**
+     * 算法名称（同时作为 JCE 变换串）
+     */
+    private static final String ALGORITHM = "SM2";
+
+    /**
      * 加密时使用的安全随机数生成器
      */
     private final SecureRandom random = new SecureRandom();
 
     @Override
     public String algorithm() {
-        return "SM2";
+        return ALGORITHM;
     }
 
     @Override
     protected String defaultTransformation() {
-        return "SM2";
+        return ALGORITHM;
     }
 
     @Override

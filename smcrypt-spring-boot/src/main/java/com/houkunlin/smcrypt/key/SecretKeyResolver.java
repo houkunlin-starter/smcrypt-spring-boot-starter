@@ -37,6 +37,35 @@ import java.util.Properties;
  */
 public class SecretKeyResolver {
     /**
+     * 属性键前缀
+     */
+    private static final String PROPERTY_PREFIX = "smcrypt.";
+    /**
+     * 环境变量前缀
+     */
+    private static final String ENV_PREFIX = "SMCRYPT_";
+    /**
+     * 默认密钥文件前缀
+     */
+    private static final String DEFAULT_FILE_PREFIX = "smcrypt-";
+    /**
+     * 密钥文件后缀
+     */
+    private static final String KEY_SUFFIX = ".key";
+    /**
+     * 密钥文件配置项后缀
+     */
+    private static final String FILE_SUFFIX = ".file";
+    /**
+     * properties 文件后缀
+     */
+    private static final String PROPERTIES_SUFFIX = ".properties";
+    /**
+     * classpath 资源前缀
+     */
+    private static final String CLASSPATH_PREFIX = "classpath:";
+
+    /**
      * 属性查询接口（Spring 场景下为 Environment）
      */
     private final PropertyLookup properties;
@@ -67,17 +96,17 @@ public class SecretKeyResolver {
         String upper = algorithm.toUpperCase();
 
         String key = firstNonBlank(
-                properties.getProperty("smcrypt." + lower + ".key"),
-                System.getProperty("smcrypt." + lower + ".key"),
-                System.getenv("SMCRYPT_" + upper + "_KEY"));
+                properties.getProperty(PROPERTY_PREFIX + lower + KEY_SUFFIX),
+                System.getProperty(PROPERTY_PREFIX + lower + KEY_SUFFIX),
+                System.getenv(ENV_PREFIX + upper + "_KEY"));
         if (key != null) {
             return key;
         }
 
         String file = firstNonBlank(
-                properties.getProperty("smcrypt." + lower + ".file"),
-                System.getProperty("smcrypt." + lower + ".file"),
-                System.getenv("SMCRYPT_" + upper + "_FILE"));
+                properties.getProperty(PROPERTY_PREFIX + lower + FILE_SUFFIX),
+                System.getProperty(PROPERTY_PREFIX + lower + FILE_SUFFIX),
+                System.getenv(ENV_PREFIX + upper + "_FILE"));
         if (file != null) {
             String content = readResource(file);
             if (content != null) {
@@ -85,11 +114,13 @@ public class SecretKeyResolver {
             }
         }
 
-        String[] defaults = {"smcrypt-" + lower + ".key", "smcrypt-" + lower + ".properties"};
+        String[] defaults = {
+                DEFAULT_FILE_PREFIX + lower + KEY_SUFFIX,
+                DEFAULT_FILE_PREFIX + lower + PROPERTIES_SUFFIX};
         for (String name : defaults) {
             String content = readResource(name);
             if (content == null) {
-                content = readResource("classpath:" + name);
+                content = readResource(CLASSPATH_PREFIX + name);
             }
             if (content != null) {
                 return content;
@@ -114,12 +145,12 @@ public class SecretKeyResolver {
                 return null;
             }
             try (InputStream inputStream = resource.getInputStream()) {
-                if (location.toLowerCase().endsWith(".properties")) {
-                    Properties properties = new Properties();
-                    properties.load(inputStream);
-                    String value = properties.getProperty("key");
+                if (location.toLowerCase().endsWith(PROPERTIES_SUFFIX)) {
+                    Properties keyProperties = new Properties();
+                    keyProperties.load(inputStream);
+                    String value = keyProperties.getProperty("key");
                     if (value == null) {
-                        value = properties.getProperty("secret_key");
+                        value = keyProperties.getProperty("secret_key");
                     }
                     return blankToNull(value);
                 }

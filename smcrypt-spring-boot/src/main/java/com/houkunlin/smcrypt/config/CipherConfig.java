@@ -21,6 +21,11 @@ import com.houkunlin.smcrypt.codec.EncodingDetector;
  */
 public class CipherConfig {
     /**
+     * JCE 变换串分隔符
+     */
+    private static final String TRANSFORMATION_SEPARATOR = "/";
+
+    /**
      * 算法名称
      */
     private final String algorithm;
@@ -77,31 +82,32 @@ public class CipherConfig {
     public static CipherConfig resolve(String algorithm, PropertyLookup properties,
                                        String defaultTransformation, CipherEncoding defaultEncoding) {
         String prefix = "smcrypt." + algorithm.toLowerCase() + ".";
-        String transformation = get(properties, prefix + "transformation");
-        String mode = get(properties, prefix + "mode");
-        String padding = get(properties, prefix + "padding");
+        String transformationValue = get(properties, prefix + "transformation");
+        String modeValue = get(properties, prefix + "mode");
+        String paddingValue = get(properties, prefix + "padding");
         String ivText = get(properties, prefix + "iv");
         String encodingText = get(properties, prefix + "encoding");
 
-        CipherEncoding encoding = CipherEncoding.fromToken(encodingText);
-        if (encoding == null) {
-            encoding = defaultEncoding;
+        CipherEncoding encodingValue = CipherEncoding.fromToken(encodingText);
+        if (encodingValue == null) {
+            encodingValue = defaultEncoding;
         }
 
-        if (transformation == null && mode != null) {
-            String actualPadding = padding != null ? padding : "PKCS5Padding";
-            transformation = algorithm.toUpperCase() + "/" + mode + "/" + actualPadding;
+        if (transformationValue == null && modeValue != null) {
+            String actualPadding = paddingValue != null ? paddingValue : "PKCS5Padding";
+            transformationValue = algorithm.toUpperCase() + TRANSFORMATION_SEPARATOR + modeValue
+                    + TRANSFORMATION_SEPARATOR + actualPadding;
         }
-        if (transformation == null) {
-            transformation = defaultTransformation;
+        if (transformationValue == null) {
+            transformationValue = defaultTransformation;
         }
 
-        byte[] iv = null;
+        byte[] ivValue = null;
         if (ivText != null) {
-            iv = EncodingDetector.detectEncoding(ivText).codec().decode(ivText);
+            ivValue = EncodingDetector.detectEncoding(ivText).codec().decode(ivText);
         }
 
-        return new CipherConfig(algorithm, transformation, mode, padding, iv, encoding);
+        return new CipherConfig(algorithm, transformationValue, modeValue, paddingValue, ivValue, encodingValue);
     }
 
     /**

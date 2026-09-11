@@ -37,6 +37,16 @@ import java.util.Map;
  * @author HouKunLin
  */
 public class SmCryptDecryptor {
+    /**
+     * 解密成功日志格式
+     */
+    private static final String LOG_DECRYPTED =
+            "[SMCRYPT] 配置类型：{}，解密配置属性：{}，算法：{}，配置来源：{}";
+    /**
+     * 解密失败日志格式
+     */
+    private static final String LOG_DECRYPT_FAILED =
+            "[SMCRYPT] 配置类型：{}，无法解密配置属性: {}，算法：{}，原始值: {}，配置来源：{}";
 
     /**
      * 执行配置文件密文解密
@@ -113,10 +123,10 @@ public class SmCryptDecryptor {
                     decrypted.put(name, OriginTrackedValue.of(decryptedValue, origin));
                 }
                 hasEncrypted = true;
-                logback.logMessage(LogLevel.INFO, "[SMCRYPT] 配置类型：{}，解密配置属性：{}，算法：{}，配置来源：{}",
+                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED,
                         simpleName, name, handler.algorithm(), source.getName());
             } catch (Exception e) {
-                logback.logMessage(LogLevel.ERROR, "[SMCRYPT] 配置类型：{}，无法解密配置属性: {}，算法：{}，原始值: {}，配置来源：{}",
+                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED,
                         simpleName, name, handler.algorithm(), value, source.getName(), e);
             }
         }
@@ -154,10 +164,10 @@ public class SmCryptDecryptor {
                 String decryptedValue = handler.getDecryptText(value);
                 decrypted.put(name, decryptedValue);
                 hasEncrypted = true;
-                logback.logMessage(LogLevel.INFO, "[SMCRYPT] 配置类型：{}，解密配置属性：{}，算法：{}，配置来源：{}",
+                logback.logMessage(LogLevel.INFO, LOG_DECRYPTED,
                         simpleName, name, handler.algorithm(), source.getName());
             } catch (Exception e) {
-                logback.logMessage(LogLevel.ERROR, "[SMCRYPT] 配置类型：{}，无法解密配置属性: {}，算法：{}，原始值: {}，配置来源：{}",
+                logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED,
                         simpleName, name, handler.algorithm(), value, source.getName(), e);
             }
         }

@@ -30,6 +30,18 @@ import java.util.Map;
  */
 @SuppressWarnings("java:S106")
 public class SmCryptCli {
+    /**
+     * 配置属性键前缀
+     */
+    private static final String PROPERTY_PREFIX = "smcrypt.";
+    /**
+     * 短选项前缀
+     */
+    private static final String OPTION_PREFIX = "-";
+    /**
+     * 长选项前缀
+     */
+    private static final String LONG_OPTION_PREFIX = "--";
 
     /**
      * 命令行入口
@@ -59,13 +71,13 @@ public class SmCryptCli {
         }
 
         String lower = algorithm.toLowerCase();
-        applyOption(options, "key", "smcrypt." + lower + ".key");
-        applyOption(options, "file", "smcrypt." + lower + ".file");
-        applyOption(options, "transformation", "smcrypt." + lower + ".transformation");
-        applyOption(options, "mode", "smcrypt." + lower + ".mode");
-        applyOption(options, "padding", "smcrypt." + lower + ".padding");
-        applyOption(options, "iv", "smcrypt." + lower + ".iv");
-        applyOption(options, "encoding", "smcrypt." + lower + ".encoding");
+        applyOption(options, "key", PROPERTY_PREFIX + lower + ".key");
+        applyOption(options, "file", PROPERTY_PREFIX + lower + ".file");
+        applyOption(options, "transformation", PROPERTY_PREFIX + lower + ".transformation");
+        applyOption(options, "mode", PROPERTY_PREFIX + lower + ".mode");
+        applyOption(options, "padding", PROPERTY_PREFIX + lower + ".padding");
+        applyOption(options, "iv", PROPERTY_PREFIX + lower + ".iv");
+        applyOption(options, "encoding", PROPERTY_PREFIX + lower + ".encoding");
 
         SmCryptContext context = new SmCryptContext(System::getProperty, new FileSystemResourceLoader());
         SmCryptEncryptor encryptor = new SmCryptEncryptor(context);
@@ -109,16 +121,18 @@ public class SmCryptCli {
         int index = 0;
         while (index < args.length) {
             String arg = args[index];
-            if (!arg.startsWith("-")) {
+            if (!arg.startsWith(OPTION_PREFIX)) {
                 index++;
                 continue;
             }
-            String name = arg.replaceFirst("^--?", "");
+            String name = arg.startsWith(LONG_OPTION_PREFIX)
+                    ? arg.substring(LONG_OPTION_PREFIX.length())
+                    : arg.substring(OPTION_PREFIX.length());
             int equals = name.indexOf('=');
             if (equals >= 0) {
                 options.put(name.substring(0, equals), name.substring(equals + 1));
                 index++;
-            } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+            } else if (index + 1 < args.length && !args[index + 1].startsWith(OPTION_PREFIX)) {
                 options.put(name, args[index + 1]);
                 index += 2;
             } else {

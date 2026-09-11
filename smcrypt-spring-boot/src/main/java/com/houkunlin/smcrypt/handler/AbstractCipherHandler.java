@@ -19,6 +19,15 @@ import java.nio.charset.StandardCharsets;
  */
 public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHandlerAware {
     /**
+     * 密文包裹后缀（算法名之后），形如 {@code SM4ENC(}
+     */
+    private static final String WRAPPER_SUFFIX = "ENC(";
+    /**
+     * 密文包裹结束符
+     */
+    private static final String WRAPPER_END = ")";
+
+    /**
      * 加解密上下文，由加载器注入
      */
     private SmCryptContext context;
@@ -81,16 +90,16 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
         if (propValue == null) {
             return false;
         }
-        String prefix = algorithm() + "ENC(";
+        String prefix = algorithm() + WRAPPER_SUFFIX;
         return propValue.length() > prefix.length()
                 && propValue.regionMatches(true, 0, prefix, 0, prefix.length())
-                && propValue.endsWith(")");
+                && propValue.endsWith(WRAPPER_END);
     }
 
     @Override
     public String getCipherText(String propValue) {
-        String prefix = algorithm() + "ENC(";
-        return propValue.substring(prefix.length(), propValue.length() - 1);
+        String prefix = algorithm() + WRAPPER_SUFFIX;
+        return propValue.substring(prefix.length(), propValue.length() - WRAPPER_END.length());
     }
 
     @Override
@@ -105,8 +114,8 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
     public String getEncryptText(String plainText) throws Exception {
         CipherConfig config = resolveConfig();
         byte[] cipherBytes = doEncrypt(plainText.getBytes(StandardCharsets.UTF_8), config);
-        return algorithm() + "ENC(" + config.encoding().name().toLowerCase() + ","
-                + config.encoding().codec().encode(cipherBytes) + ")";
+        return algorithm() + WRAPPER_SUFFIX + config.encoding().name().toLowerCase() + ","
+                + config.encoding().codec().encode(cipherBytes) + WRAPPER_END;
     }
 
     /**

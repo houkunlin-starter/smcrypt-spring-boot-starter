@@ -32,6 +32,10 @@ import java.util.Base64;
  * @author HouKunLin
  */
 public final class PrivateKeyLoader {
+    /**
+     * EC 密钥工厂算法名称（SM2、ECC 均映射到 EC）
+     */
+    private static final String EC_ALGORITHM = "EC";
 
     /**
      * 工具类，禁止实例化
@@ -144,8 +148,8 @@ public final class PrivateKeyLoader {
      */
     private static String jceAlgorithm(String algorithm) {
         String upper = algorithm.toUpperCase();
-        if ("SM2".equals(upper) || "ECC".equals(upper) || "EC".equals(upper)) {
-            return "EC";
+        if ("SM2".equals(upper) || "ECC".equals(upper) || EC_ALGORITHM.equals(upper)) {
+            return EC_ALGORITHM;
         }
         return upper;
     }
