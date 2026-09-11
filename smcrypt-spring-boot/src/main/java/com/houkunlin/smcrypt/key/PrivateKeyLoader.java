@@ -13,6 +13,7 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -46,9 +47,13 @@ public final class PrivateKeyLoader {
     /**
      * 加载非对称私钥
      *
+     * <p>支持两种格式：包含 {@code -----BEGIN} 标识的 PEM 文本，以及 Base64/DER 编码的 PKCS#8 私钥。</p>
+     *
      * @param content   私钥内容（PEM 或 Base64/DER 编码的 PKCS#8）
      * @param algorithm 算法名称（SM2、RSA、ECC 等）
      * @return 私钥对象
+     * @throws IllegalArgumentException 私钥内容为空，或解析失败（PEM 解析、Base64/DER 解码、
+     *                                  KeyFactory 生成私钥失败等）时抛出，原始异常作为 cause 保留
      */
     public static PrivateKey load(String content, String algorithm) {
         if (content == null || content.trim().isEmpty()) {
@@ -99,13 +104,25 @@ public final class PrivateKeyLoader {
     }
 
     /**
-     * 解析 PEM 格式私钥
+     * 解析 PEM 格式私钥文本
      *
-     * @param value PEM 文本
-     * @return 私钥对象
-     * @throws Exception 解析失败时抛出
+     * <p>通过 BouncyCastle 的 {@link PEMParser} 读取 PEM 对象，支持以下形式：</p>
+     * <ul>
+     *     <li>{@link PEMKeyPair}：PKCS#1 / SEC1 密钥对（如 {@code -----BEGIN RSA PRIVATE KEY-----}、
+     *         {@code -----BEGIN EC PRIVATE KEY-----}），返回其中的私钥；</li>
+     *     <li>{@link PrivateKeyInfo}：PKCS#8 私钥（如 {@code -----BEGIN PRIVATE KEY-----}）。</li>
+     * </ul>
+     *
+     * <p>加密的 PEM 私钥（{@link PEMEncryptedKeyPair}）与无法识别的 PEM 内容（包括空内容）均不受支持。</p>
+     *
+     * @param value PEM 文本（已去除首尾空白，且包含 {@code -----BEGIN} 标识）
+     * @return 解析出的私钥对象
+     * @throws IOException              PEM 内容读取失败（{@link PEMParser#readObject()}）、密钥转换失败
+     *                                  （BouncyCastle 的 {@code PEMException} 继承自 {@link IOException}），
+     *                                  或关闭解析器失败时抛出
+     * @throws IllegalArgumentException PEM 私钥已加密（暂不支持），或 PEM 内容无法识别时抛出
      */
-    private static PrivateKey loadPem(String value) throws Exception {
+    private static PrivateKey loadPem(String value) throws IOException {
         try (PEMParser parser = new PEMParser(new StringReader(value))) {
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(BouncyCastleSupport.provider());
             Object object = parser.readObject();
