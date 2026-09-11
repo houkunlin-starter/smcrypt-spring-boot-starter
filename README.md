@@ -283,8 +283,8 @@ public class DemoService {
   - 对称：`AES-256-GCM`（国际通用）或 `SM4-GCM` / `SM4-CBC`（国密合规）；
   - 非对称：`RSA-3072 + OAEP`（国际通用）或 `SM2`（国密合规）。
 - 可接受（需正确使用）：
-  - `AES-128/192/256-CBC`、`SM4-CBC`（必须使用随机且不可复用的 IV；非 AEAD 模式无完整性校验，防篡改请改用 GCM 或自行增加
-    MAC）；
+  - `AES-128/192/256-CBC`、`SM4-CBC`（必须使用随机且不可复用的 IV；默认无完整性校验，可配置
+    `smcrypt.<算法>.mac` 启用 encrypt-then-MAC，或改用 GCM）；
   - `RSA-2048 + OAEP`、`ECC/ECIES`（P-256 及以上曲线）。
 - 不推荐 / 仅兼容：
   - `DES`、`3DES(DESEDE)`：强度不足或已过时；

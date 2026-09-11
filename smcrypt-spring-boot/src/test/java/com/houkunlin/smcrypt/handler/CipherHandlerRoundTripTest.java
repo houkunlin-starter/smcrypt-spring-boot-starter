@@ -174,6 +174,24 @@ class CipherHandlerRoundTripTest {
     }
 
     @Test
+    void sm2DetectsTamperedCipherText() throws Exception {
+        KeyPair keyPair = ecKeyPair("sm2p256v1");
+        Sm2Handler handler = new Sm2Handler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.sm2.key", privateKey(keyPair))));
+        String cipher = handler.getEncryptText("sm2-tamper");
+        assertThrows(Exception.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
+    }
+
+    @Test
+    void eccDetectsTamperedCipherText() throws Exception {
+        KeyPair keyPair = ecKeyPair("secp256r1");
+        EccHandler handler = new EccHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.ecc.key", privateKey(keyPair))));
+        String cipher = handler.getEncryptText("ecc-tamper");
+        assertThrows(Exception.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
+    }
+
+    @Test
     void sm9RawSm4RoundTrip() throws Exception {
         assertSm9RoundTrip(null, null);
     }
@@ -227,14 +245,14 @@ class CipherHandlerRoundTripTest {
     }
 
     /**
-     * 翻转密文载荷首字节，模拟被篡改的密文（仅适用于 base64 编码的对称密文）。
+     * 翻转密文载荷末尾字节，模拟被篡改的密文（仅适用于 base64 编码的密文）。
      */
     private static String tamperBase64Payload(String cipherText) {
         int comma = cipherText.indexOf(',');
         String prefix = cipherText.substring(0, comma + 1);
         String body = cipherText.substring(comma + 1, cipherText.length() - 1);
         byte[] bytes = Base64.getDecoder().decode(body);
-        bytes[0] ^= 0x01;
+        bytes[bytes.length - 1] ^= 0x01;
         return prefix + Base64.getEncoder().encodeToString(bytes) + ")";
     }
 
