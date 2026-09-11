@@ -23,6 +23,11 @@ public class DesEdeHandler extends AbstractSymmetricCipherHandler {
     }
 
     @Override
+    protected String jceAlgorithm() {
+        return "DESede";
+    }
+
+    @Override
     protected String defaultTransformation() {
         return "DESede/ECB/PKCS5Padding";
     }

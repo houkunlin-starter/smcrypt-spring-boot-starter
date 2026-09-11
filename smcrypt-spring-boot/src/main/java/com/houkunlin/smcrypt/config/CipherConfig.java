@@ -111,7 +111,7 @@ public class CipherConfig {
 
         if (transformationValue == null && modeValue != null) {
             String actualPadding = paddingValue != null ? paddingValue : "PKCS5Padding";
-            transformationValue = jceAlgorithm.toUpperCase() + TRANSFORMATION_SEPARATOR + modeValue
+            transformationValue = jceAlgorithm + TRANSFORMATION_SEPARATOR + modeValue
                     + TRANSFORMATION_SEPARATOR + actualPadding;
         }
         if (transformationValue == null) {

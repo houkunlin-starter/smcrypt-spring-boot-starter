@@ -26,15 +26,16 @@
 | `smcrypt.pbe.kdf.iterations`                                        | 加解密 | KDF  | 迭代次数                                            | `600000`（Argon2 为 3）       |
 | `smcrypt.pbe.kdf.key-length`                                        | 加解密 | KDF  | 派生密钥位数                                        | 按算法                        |
 | `smcrypt.pbe.kdf.salt`                                              | 加解密 | KDF  | 固定盐（hex / Base64）；不配则随机内嵌              | 无（随机内嵌）                |
-| `smcrypt.pbe.kdf.salt-size`                                         | 加密   | KDF  | 随机盐长度                                          | `16`                          |
+| `smcrypt.pbe.kdf.salt-size`                                         | 加解密 | KDF  | 随机盐长度                                          | `16`                          |
 | `smcrypt.pbe.kdf.cost` / `.block-size` / `.parallelism` / `.memory` | 加解密 | KDF  | scrypt / Argon2 参数                                | `65536` / `8` / `1` / `65536` |
 | `smcrypt.pbe.transformation`                                        | 加解密 | JCE  | JCE PBE 变换串                                      | `PBEWITHHMACSHA512ANDAES_256` |
 | `smcrypt.pbe.iterations`                                            | 加解密 | JCE  | 迭代次数                                            | `1000`                        |
-| `smcrypt.pbe.salt-size` / `.iv-size`                                | 加密   | JCE  | 盐 / IV 长度（0=无 IV）                             | 分组大小                      |
+| `smcrypt.pbe.salt-size` / `.iv-size`                                | 加解密 | JCE  | 盐 / IV 长度（0=无 IV）                             | 分组大小                      |
 | `smcrypt.pbe.provider`                                              | 加解密 | JCE  | Provider 名                                         | JVM 默认（SunJCE）            |
 
 > `阶段` 列说明：`加密` 表示仅在生成密文时使用；`加解密` 表示加密与解密两端都需保持一致。
-> `encoding` 仅影响加密输出；盐（`salt-size`）与 IV（`iv-size`）在加密时随机生成并内嵌到载荷，解密时直接从载荷读取。
+> `encoding` 仅影响加密输出；盐与 IV 的内容在加密时随机生成并内嵌到载荷，解密时直接从载荷读取，但解析载荷所需的 **长度**（
+> `salt-size` / `iv-size`）在两端都必须一致，否则无法正确拆分载荷。
 
 ## 示例
 
