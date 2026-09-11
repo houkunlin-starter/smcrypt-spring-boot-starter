@@ -14,7 +14,7 @@ dependencies {
     api 'org.bouncycastle:bcprov-jdk15to18'
     api 'org.bouncycastle:bcpkix-jdk15to18'
 
-    compileOnly 'org.slf4j:slf4j-api:2.0.18'
+    compileOnly 'org.slf4j:slf4j-api:1.7.36'
     compileOnly 'org.springframework.boot:spring-boot:2.7.0'
     compileOnly 'ch.qos.logback:logback-classic:1.2.13'
 

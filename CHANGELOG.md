@@ -35,6 +35,8 @@
 - 修复 `.properties` 密钥文件按 ISO-8859-1 解码导致非 ASCII 口令乱码的问题，改为按 UTF-8 读取。
 - 修复通过 `META-INF/services` 加载处理器时，provider 实例化失败抛出的 `ServiceConfigurationError`（`Error` 子类）
   未被捕获、导致应用启动中断的问题。
+- 核心模块编译依赖对齐 Spring Boot 2.7.0：`slf4j-api` 1.7.36 + `logback-classic` 1.2.13，修正此前
+  `slf4j-api` 2.0.x 与 `logback-classic` 1.2.x 的版本错配。
 
 ### 文档
 
