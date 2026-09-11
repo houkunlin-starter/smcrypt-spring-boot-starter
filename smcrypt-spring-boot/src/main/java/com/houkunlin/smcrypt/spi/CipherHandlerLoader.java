@@ -74,7 +74,7 @@ public class CipherHandlerLoader {
             for (DecryptHandler handler : ServiceLoader.load(DecryptHandler.class, classLoader)) {
                 handlers.put(key(handler), handler);
             }
-        } catch (Throwable e) {
+        } catch (Exception e) {
             // 业务方未注册或注册内容异常时跳过该来源，但记录异常，避免静默失败
             SmCryptLog.warn("通过 META-INF/services 加载密文处理器失败，已跳过该来源，不影响内置处理器", e);
         }
@@ -91,7 +91,7 @@ public class CipherHandlerLoader {
             for (DecryptHandler handler : SpringFactoriesLoader.loadFactories(DecryptHandler.class, classLoader)) {
                 handlers.put(key(handler), handler);
             }
-        } catch (Throwable e) {
+        } catch (Exception e) {
             // spring.factories 不存在或加载异常时跳过该来源，但记录异常，避免静默失败
             SmCryptLog.warn("通过 spring.factories 加载密文处理器失败，已跳过该来源", e);
         }
