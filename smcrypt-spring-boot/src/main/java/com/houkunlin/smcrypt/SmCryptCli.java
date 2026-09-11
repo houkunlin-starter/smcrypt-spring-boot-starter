@@ -4,6 +4,9 @@ import com.houkunlin.smcrypt.key.Sm9KeyMaterial;
 import com.houkunlin.smcrypt.key.SmCryptKeyGenerator;
 import org.springframework.core.io.FileSystemResourceLoader;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.LinkedHashMap;
@@ -55,6 +58,10 @@ public class SmCryptCli {
      * 长选项前缀
      */
     private static final String LONG_OPTION_PREFIX = "--";
+    /**
+     * 从标准输入读取密钥/口令的标记
+     */
+    private static final String STDIN_MARKER = "-";
 
     /**
      * 命令行入口
@@ -90,6 +97,7 @@ public class SmCryptCli {
         }
 
         String lower = algorithm.toLowerCase(Locale.ROOT);
+        applySecretOption(options, "key", PROPERTY_PREFIX + lower + ".key");
         applyOption(options, "file", PROPERTY_PREFIX + lower + ".file");
         applyOption(options, "transformation", PROPERTY_PREFIX + lower + ".transformation");
         applyOption(options, "mode", PROPERTY_PREFIX + lower + ".mode");
@@ -97,7 +105,7 @@ public class SmCryptCli {
         applyOption(options, "iv", PROPERTY_PREFIX + lower + ".iv");
         applyOption(options, "encoding", PROPERTY_PREFIX + lower + ".encoding");
         // 口令派生 / Jasypt 兼容（PBE / JASYPT 算法）
-        applyOption(options, "password", PROPERTY_PREFIX + lower + ".password");
+        applySecretOption(options, "password", PROPERTY_PREFIX + lower + ".password");
         applyOption(options, "kdf", PROPERTY_PREFIX + lower + ".kdf");
         applyOption(options, "kdf-iterations", PROPERTY_PREFIX + lower + ".kdf.iterations");
         applyOption(options, "salt", PROPERTY_PREFIX + lower + ".kdf.salt");
@@ -191,6 +199,51 @@ public class SmCryptCli {
     }
 
     /**
+     * 将敏感选项（密钥 / 口令）写入系统属性，供 {@link SmCryptContext} 解析
+     *
+     * <p>当选项值为 {@code -} 时从标准输入读取一行，避免密钥 / 口令出现在进程列表与命令历史中。</p>
+     *
+     * @param options  命令行选项
+     * @param option   选项名
+     * @param property 对应的系统属性名
+     */
+    private static void applySecretOption(Map<String, String> options, String option, String property) {
+        String value = options.get(option);
+        if (value == null || value.trim().isEmpty()) {
+            return;
+        }
+        if (STDIN_MARKER.equals(value.trim())) {
+            value = readSecretFromStdin(option);
+            if (value == null) {
+                System.err.println("从标准输入读取 --" + option + " 失败");
+                System.exit(1);
+                return;
+            }
+        }
+        System.setProperty(property, value);
+    }
+
+    /**
+     * 从标准输入读取一行敏感内容
+     *
+     * @param option 选项名（用于错误提示）
+     * @return 读取到的内容；读取失败或为空时返回 null
+     */
+    private static String readSecretFromStdin(String option) {
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+            String line = reader.readLine();
+            if (line == null || line.trim().isEmpty()) {
+                return null;
+            }
+            return line.trim();
+        } catch (IOException e) {
+            SmCryptLog.error("从标准输入读取 --{} 失败", option, e);
+            return null;
+        }
+    }
+
+    /**
      * 解析命令行参数为选项映射
      *
      * <p>支持 {@code --name value}、{@code --name=value} 与 {@code -x value} 三种写法；
@@ -216,7 +269,8 @@ public class SmCryptCli {
             if (equals >= 0) {
                 options.put(name.substring(0, equals), name.substring(equals + 1));
                 index++;
-            } else if (index + 1 < args.length && !args[index + 1].startsWith(OPTION_PREFIX)) {
+            } else if (index + 1 < args.length
+                    && (!args[index + 1].startsWith(OPTION_PREFIX) || STDIN_MARKER.equals(args[index + 1]))) {
                 options.put(name, args[index + 1]);
                 index += 2;
             } else {
@@ -235,14 +289,14 @@ public class SmCryptCli {
         System.out.println("      SmCryptCli --generate-key --algorithm <算法> [--key-length <位>] [选项]");
         System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED / RSA / ECC / PBE / JASYPT");
         System.out.println("  --text, -t        待加密明文；配合 --decrypt 时表示待解密密文");
-        System.out.println("  --key, -k         密钥内容（hex / Base64 / PEM）");
+        System.out.println("  --key, -k         密钥内容（hex / Base64 / PEM；值为 - 时从标准输入读取，避免留在命令历史；也可用 --file 或环境变量）");
         System.out.println("  --file, -f        密钥文件路径（file: 或 classpath:）");
         System.out.println("  --encoding, -e    加密输出编码：hex / base64（默认 base64）");
         System.out.println("  --transformation  自定义 JCE 变换串，如 AES/GCM/NoPadding");
         System.out.println("  --mode            加密模式，如 CBC、GCM、C1C3C2");
         System.out.println("  --padding         填充方式，默认 PKCS5Padding");
         System.out.println("  --iv              初始向量（hex / Base64）");
-        System.out.println("  --password        口令派生 / Jasypt 兼容的口令");
+        System.out.println("  --password        口令派生 / Jasypt 兼容的口令（值为 - 时从标准输入读取）");
         System.out.println("  --kdf             KDF 算法：PBKDF2 / SCRYPT / ARGON2（PBE，默认 PBKDF2）");
         System.out.println("  --kdf-iterations  KDF 迭代次数（PBE）");
         System.out.println("  --salt            KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）");

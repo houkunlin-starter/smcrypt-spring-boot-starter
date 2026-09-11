@@ -92,14 +92,14 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 |--------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `CAMELLIA` / `ARIA` / `SEED` / `RSA` / `ECC` / `PBE` / `JASYPT` |
 | `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                                                                               |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                                                                              |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）；值为 `-` 时从标准输入读取；也可用 `--file` 或环境变量 `SMCRYPT_<算法>_KEY`                                                                  |
 | `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                                                                      |
 | `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                                                                             |
 | `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                                                                   |
 | `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                                                                         |
 | `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                                                                               |
 | `--iv`             |      | 初始向量（hex / Base64）                                                                                                                                                    |
-| `--password`       |      | 口令派生 / Jasypt 兼容的口令                                                                                                                                                |
+| `--password`       |      | 口令派生 / Jasypt 兼容的口令；值为 `-` 时从标准输入读取                                                                                                                     |
 | `--kdf`            |      | KDF 算法：`PBKDF2` / `SCRYPT` / `ARGON2`（PBE，默认 `PBKDF2`）                                                                                                              |
 | `--kdf-iterations` |      | KDF 迭代次数（PBE）                                                                                                                                                         |
 | `--salt`           |      | KDF 固定盐（hex / Base64，PBE；不配则随机内嵌）                                                                                                                             |
@@ -118,6 +118,9 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
     --algorithm SM4 --key 0123456789abcdeffedcba9876543210 \
     --decrypt --text "SM4ENC(base64,xxxxxxxx)"
 ```
+
+> 安全提示：`--key` / `--password` 的值会出现在进程列表与命令历史中。敏感场景建议使用
+> `--key -` / `--password -` 从标准输入读取，或改用 `--file` 与 `SMCRYPT_<算法>_KEY` 环境变量。
 
 ## 相关文档
 
