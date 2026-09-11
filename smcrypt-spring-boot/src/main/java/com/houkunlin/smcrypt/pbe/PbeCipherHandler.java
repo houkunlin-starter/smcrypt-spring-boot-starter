@@ -8,6 +8,7 @@ import com.houkunlin.smcrypt.key.KeyDerivation;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.util.Locale;
 
 /**
  * 口令派生（PBE）处理器，支持两种模式（{@code smcrypt.pbe.mode}）：
@@ -127,7 +128,7 @@ public class PbeCipherHandler extends AbstractPbeCipherHandler {
     }
 
     private static int ivLength(String transformation) {
-        String upper = transformation.toUpperCase();
+        String upper = transformation.toUpperCase(Locale.ROOT);
         if (upper.contains("ECB")) {
             return 0;
         }
@@ -142,7 +143,7 @@ public class PbeCipherHandler extends AbstractPbeCipherHandler {
     }
 
     private static int defaultKeyLengthBits(String keyAlgorithm) {
-        String upper = keyAlgorithm.toUpperCase();
+        String upper = keyAlgorithm.toUpperCase(Locale.ROOT);
         switch (upper) {
             case "SM4":
             case "SEED":

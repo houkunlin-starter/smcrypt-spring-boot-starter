@@ -9,6 +9,7 @@ import org.springframework.util.StreamUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Properties;
 
 /**
@@ -92,8 +93,8 @@ public class SecretKeyResolver {
      * @return 密钥内容；未找到时返回 null
      */
     public String resolve(String algorithm) {
-        String lower = algorithm.toLowerCase();
-        String upper = algorithm.toUpperCase();
+        String lower = algorithm.toLowerCase(Locale.ROOT);
+        String upper = algorithm.toUpperCase(Locale.ROOT);
 
         String key = firstNonBlank(
                 properties.getProperty(PROPERTY_PREFIX + lower + KEY_SUFFIX),
@@ -145,7 +146,7 @@ public class SecretKeyResolver {
                 return null;
             }
             try (InputStream inputStream = resource.getInputStream()) {
-                if (location.toLowerCase().endsWith(PROPERTIES_SUFFIX)) {
+                if (location.toLowerCase(Locale.ROOT).endsWith(PROPERTIES_SUFFIX)) {
                     Properties keyProperties = new Properties();
                     keyProperties.load(inputStream);
                     String value = keyProperties.getProperty("key");

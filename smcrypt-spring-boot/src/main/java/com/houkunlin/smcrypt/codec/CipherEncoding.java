@@ -1,5 +1,7 @@
 package com.houkunlin.smcrypt.codec;
 
+import java.util.Locale;
+
 /**
  * 密文编码类型。
  *
@@ -47,7 +49,7 @@ public enum CipherEncoding {
         if (token == null) {
             return null;
         }
-        String value = token.trim().toLowerCase();
+        String value = token.trim().toLowerCase(Locale.ROOT);
         if ("hex".equals(value)) {
             return HEX;
         }

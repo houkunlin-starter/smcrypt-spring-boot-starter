@@ -118,7 +118,7 @@ public class CipherHandlerLoader {
      */
     private String key(DecryptHandler handler) {
         String algorithm = handler.algorithm();
-        return algorithm == null ? "" : algorithm.toUpperCase();
+        return algorithm == null ? "" : algorithm.toUpperCase(Locale.ROOT);
     }
 
     /**

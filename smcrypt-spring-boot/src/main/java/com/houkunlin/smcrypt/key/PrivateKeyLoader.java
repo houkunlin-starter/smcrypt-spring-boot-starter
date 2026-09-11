@@ -22,6 +22,7 @@ import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
+import java.util.Locale;
 
 /**
  * 非对称私钥加载与公钥推导工具。
@@ -164,7 +165,7 @@ public final class PrivateKeyLoader {
      * @return JCE 算法名称
      */
     private static String jceAlgorithm(String algorithm) {
-        String upper = algorithm.toUpperCase();
+        String upper = algorithm.toUpperCase(Locale.ROOT);
         if ("SM2".equals(upper) || "ECC".equals(upper) || EC_ALGORITHM.equals(upper)) {
             return EC_ALGORITHM;
         }

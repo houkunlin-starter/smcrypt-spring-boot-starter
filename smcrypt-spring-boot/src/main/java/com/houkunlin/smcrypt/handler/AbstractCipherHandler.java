@@ -8,6 +8,7 @@ import com.houkunlin.smcrypt.config.CipherConfig;
 import com.houkunlin.smcrypt.key.KeyCodec;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * 密文处理器抽象基类。
@@ -114,7 +115,7 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
     public String getEncryptText(String plainText) throws Exception {
         CipherConfig config = resolveConfig();
         byte[] cipherBytes = doEncrypt(plainText.getBytes(StandardCharsets.UTF_8), config);
-        return algorithm() + WRAPPER_SUFFIX + config.encoding().name().toLowerCase() + ","
+        return algorithm() + WRAPPER_SUFFIX + config.encoding().name().toLowerCase(Locale.ROOT) + ","
                 + config.encoding().codec().encode(cipherBytes) + WRAPPER_END;
     }
 
@@ -149,7 +150,7 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
         String key = context().resolveKey(algorithm());
         if (key == null) {
             throw new IllegalStateException("未找到 " + algorithm() + " 算法所需密钥，请配置 smcrypt."
-                    + algorithm().toLowerCase() + ".key 或 smcrypt." + algorithm().toLowerCase() + ".file");
+                    + algorithm().toLowerCase(Locale.ROOT) + ".key 或 smcrypt." + algorithm().toLowerCase(Locale.ROOT) + ".file");
         }
         return key;
     }

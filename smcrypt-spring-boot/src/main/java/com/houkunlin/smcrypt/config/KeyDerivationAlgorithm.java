@@ -1,5 +1,7 @@
 package com.houkunlin.smcrypt.config;
 
+import java.util.Locale;
+
 /**
  * 口令派生函数（KDF）算法。
  *
@@ -35,7 +37,7 @@ public enum KeyDerivationAlgorithm {
         if (token == null) {
             return null;
         }
-        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
         if (normalized.isEmpty()) {
             return null;
         }

@@ -1,5 +1,7 @@
 package com.houkunlin.smcrypt.config;
 
+import java.util.Locale;
+
 /**
  * 完整性校验（MAC）算法。
  *
@@ -58,7 +60,7 @@ public enum MacAlgorithm {
         if (token == null) {
             return null;
         }
-        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        String normalized = token.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
         if (normalized.isEmpty()) {
             return null;
         }

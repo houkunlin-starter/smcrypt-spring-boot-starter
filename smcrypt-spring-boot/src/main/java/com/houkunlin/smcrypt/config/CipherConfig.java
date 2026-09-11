@@ -5,6 +5,8 @@ import com.houkunlin.smcrypt.codec.CipherEncoding;
 import com.houkunlin.smcrypt.codec.EncodingDetector;
 import com.houkunlin.smcrypt.key.KeyCodec;
 
+import java.util.Locale;
+
 /**
  * 单个算法的加解密配置。
  *
@@ -97,7 +99,7 @@ public class CipherConfig {
      */
     public static CipherConfig resolve(String algorithm, String jceAlgorithm, PropertyLookup properties,
                                        String defaultTransformation, CipherEncoding defaultEncoding) {
-        String prefix = "smcrypt." + algorithm.toLowerCase() + ".";
+        String prefix = "smcrypt." + algorithm.toLowerCase(Locale.ROOT) + ".";
         String transformationValue = get(properties, prefix + "transformation");
         String modeValue = get(properties, prefix + "mode");
         String paddingValue = get(properties, prefix + "padding");

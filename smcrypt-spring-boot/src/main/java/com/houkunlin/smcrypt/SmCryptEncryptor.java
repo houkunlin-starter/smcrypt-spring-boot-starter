@@ -5,6 +5,7 @@ import com.houkunlin.smcrypt.spi.CipherHandlerLoader;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -39,7 +40,7 @@ public class SmCryptEncryptor {
         List<DecryptHandler> loaded = new CipherHandlerLoader().load(context);
         this.handlers = new LinkedHashMap<>();
         for (DecryptHandler handler : loaded) {
-            handlers.put(handler.algorithm().toUpperCase(), handler);
+            handlers.put(handler.algorithm().toUpperCase(Locale.ROOT), handler);
         }
     }
 
@@ -52,7 +53,7 @@ public class SmCryptEncryptor {
      * @throws Exception 加密失败时抛出
      */
     public String encrypt(String algorithm, String plainText) throws Exception {
-        DecryptHandler handler = handlers.get(algorithm.toUpperCase());
+        DecryptHandler handler = handlers.get(algorithm.toUpperCase(Locale.ROOT));
         if (handler == null) {
             throw new IllegalArgumentException("不支持的算法：" + algorithm);
         }

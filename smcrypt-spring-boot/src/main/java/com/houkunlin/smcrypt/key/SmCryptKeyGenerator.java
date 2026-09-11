@@ -17,6 +17,7 @@ import java.io.StringWriter;
 import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
+import java.util.Locale;
 
 /**
  * 密钥生成工具。
@@ -64,7 +65,7 @@ public final class SmCryptKeyGenerator {
      * @return 对称算法返回 true
      */
     public static boolean isSymmetric(String algorithm) {
-        String upper = algorithm.toUpperCase();
+        String upper = algorithm.toUpperCase(Locale.ROOT);
         return SM4.equals(upper) || AES.equals(upper) || DES.equals(upper) || DESEDE.equals(upper)
                 || CHACHA20.equals(upper) || GOST3412.equals(upper) || DSTU7624.equals(upper) || RC6.equals(upper)
                 || CAMELLIA.equals(upper) || ARIA.equals(upper) || SEED.equals(upper);
@@ -79,7 +80,7 @@ public final class SmCryptKeyGenerator {
      * @return 十六进制密钥字符串
      */
     public static String generateSymmetricKey(String algorithm, int keySizeBits) {
-        String upper = algorithm.toUpperCase();
+        String upper = algorithm.toUpperCase(Locale.ROOT);
         int jceKeySize = resolveSymmetricKeySize(upper, keySizeBits);
         try {
             KeyGenerator keyGenerator = KeyGenerator.getInstance(symmetricJceAlgorithm(upper), BouncyCastleSupport.provider());
@@ -99,7 +100,7 @@ public final class SmCryptKeyGenerator {
      * @return 密钥对
      */
     public static KeyPair generateKeyPair(String algorithm, int keySizeBits) {
-        String upper = algorithm.toUpperCase();
+        String upper = algorithm.toUpperCase(Locale.ROOT);
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance(jceKeyPairAlgorithm(upper), BouncyCastleSupport.provider());
             if (RSA.equals(upper)) {

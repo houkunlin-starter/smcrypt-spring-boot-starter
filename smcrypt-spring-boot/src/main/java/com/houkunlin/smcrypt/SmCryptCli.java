@@ -7,6 +7,7 @@ import org.springframework.core.io.FileSystemResourceLoader;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -88,8 +89,7 @@ public class SmCryptCli {
             return;
         }
 
-        String lower = algorithm.toLowerCase();
-        applyOption(options, "key", PROPERTY_PREFIX + lower + ".key");
+        String lower = algorithm.toLowerCase(Locale.ROOT);
         applyOption(options, "file", PROPERTY_PREFIX + lower + ".file");
         applyOption(options, "transformation", PROPERTY_PREFIX + lower + ".transformation");
         applyOption(options, "mode", PROPERTY_PREFIX + lower + ".mode");
