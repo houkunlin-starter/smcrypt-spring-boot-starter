@@ -47,6 +47,10 @@ public class SmCryptDecryptor {
      * 解密失败日志格式
      */
     private static final String LOG_DECRYPT_FAILED = "[SMCRYPT] 配置类型：{}，配置来源：{}，算法：{}，无法解密配置属性: {}，原始值: {}";
+    /**
+     * 是否在解密失败时中断启动的配置项；默认 false（记录日志并跳过）
+     */
+    private static final String FAIL_FAST_PROPERTY = "smcrypt.fail-fast";
 
     /**
      * 执行配置文件密文解密
@@ -61,6 +65,7 @@ public class SmCryptDecryptor {
             logback.logMessage(LogLevel.INFO, "[SMCRYPT] 正在执行 {} ，即将对配置文件属性值的密文进行解密处理", getClass().getName());
             SmCryptContext context = SmCryptContext.fromEnvironment(environment);
             List<DecryptHandler> handlers = new CipherHandlerLoader().load(context);
+            boolean failFast = isFailFast(context);
             MutablePropertySources propertySources = environment.getPropertySources();
             if (!hasCipherText(propertySources, handlers)) {
                 logback.logMessage(LogLevel.INFO, "[SMCRYPT] 未检测到配置文件中存在加密的配置属性值密文，跳过配置文件解密，可以忽略相关日志提示");
@@ -70,9 +75,9 @@ public class SmCryptDecryptor {
             Map<String, PropertySource<?>> replacements = new HashMap<>();
             for (PropertySource<?> source : propertySources) {
                 if (source instanceof OriginTrackedMapPropertySource) {
-                    handler(replacements, (OriginTrackedMapPropertySource) source, handlers, logback);
+                    handler(replacements, (OriginTrackedMapPropertySource) source, handlers, logback, failFast);
                 } else if (source instanceof MapPropertySource) {
-                    handler(replacements, (MapPropertySource) source, handlers, logback);
+                    handler(replacements, (MapPropertySource) source, handlers, logback, failFast);
                 }
             }
             replacements.forEach(propertySources::replace);
@@ -98,9 +103,10 @@ public class SmCryptDecryptor {
      * @param source       当前遍历的 OriginTrackedMapPropertySource
      * @param handlers     密文处理器列表
      * @param logback      日志工具
+     * @param failFast     解密失败时是否中断启动
      */
     private void handler(Map<String, PropertySource<?>> replacements, OriginTrackedMapPropertySource source,
-                         List<DecryptHandler> handlers, SmCryptLogback logback) {
+                         List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
         String simpleName = source.getClass().getSimpleName();
         Map<String, Object> decrypted = new HashMap<>();
         boolean hasEncrypted = false;
@@ -131,6 +137,7 @@ public class SmCryptDecryptor {
                 logback.logMessage(LogLevel.INFO, LOG_DECRYPTED, simpleName, sourceName, handler.algorithm(), name);
             } catch (Exception e) {
                 logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED, simpleName, sourceName, handler.algorithm(), name, value, e);
+                failFastAbort(failFast, name, e);
             }
         }
         if (hasEncrypted) {
@@ -147,9 +154,10 @@ public class SmCryptDecryptor {
      * @param source       当前遍历的 MapPropertySource
      * @param handlers     密文处理器列表
      * @param logback      日志工具
+     * @param failFast     解密失败时是否中断启动
      */
     private void handler(Map<String, PropertySource<?>> replacements, MapPropertySource source,
-                         List<DecryptHandler> handlers, SmCryptLogback logback) {
+                         List<DecryptHandler> handlers, SmCryptLogback logback, boolean failFast) {
         String simpleName = source.getClass().getSimpleName();
         Map<String, Object> decrypted = new HashMap<>();
         boolean hasEncrypted = false;
@@ -168,6 +176,7 @@ public class SmCryptDecryptor {
                 logback.logMessage(LogLevel.INFO, LOG_DECRYPTED, simpleName, sourceName, handler.algorithm(), name);
             } catch (Exception e) {
                 logback.logMessage(LogLevel.ERROR, LOG_DECRYPT_FAILED, simpleName, sourceName, handler.algorithm(), name, value, e);
+                failFastAbort(failFast, name, e);
             }
         }
         if (hasEncrypted) {
@@ -213,5 +222,32 @@ public class SmCryptDecryptor {
             }
         }
         return null;
+    }
+
+    /**
+     * 读取是否在解密失败时中断启动
+     *
+     * <p>由 {@code smcrypt.fail-fast=true} 启用；启用后单个属性解密失败（含未找到密钥）
+     * 将抛出异常中断应用启动，而不是记录日志后跳过。</p>
+     *
+     * @param context 加解密上下文
+     * @return 启用返回 true
+     */
+    private boolean isFailFast(SmCryptContext context) {
+        String value = context.getProperty(FAIL_FAST_PROPERTY);
+        return value != null && Boolean.parseBoolean(value.trim());
+    }
+
+    /**
+     * 在启用 fail-fast 时抛出异常中断启动
+     *
+     * @param failFast 是否启用
+     * @param name     解密失败的属性名
+     * @param cause    原始异常
+     */
+    private void failFastAbort(boolean failFast, String name, Exception cause) {
+        if (failFast) {
+            throw new IllegalStateException("配置属性 " + name + " 解密失败（smcrypt.fail-fast=true）", cause);
+        }
     }
 }
