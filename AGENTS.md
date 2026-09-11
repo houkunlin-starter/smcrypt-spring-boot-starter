@@ -30,7 +30,8 @@
 - 核心源码必须兼容 Java 8（禁止 `var`、`instanceof` 模式匹配、`List.of` 等）。
 - 新增算法：继承 `AbstractCipherHandler`（对称用 `AbstractSymmetricCipherHandler`），并在
   `CipherHandlerLoader#builtinHandlers` 注册。
-- 密文格式统一为 `{算法}ENC([hex|base64,]密文)`，编码缺省时自动识别。
+- 密文格式统一为 `{算法}ENC([hex|base64,]密文)`，编码缺省时自动识别；对称算法可选启用
+  encrypt-then-MAC（`smcrypt.<算法>.mac=HmacSM3|HmacSHA256`），此时载荷为 `密文 || MAC`，解密前先校验。
 - 核心测试运行时会加载 `src/test/resources/META-INF/services` 与 `spring.factories` 中注册的测试处理器，
   用于验证 SPI 扩展路径，改动时需同步更新 `CipherHandlerLoaderTest`。
 - 早期日志配置文件名固定为 `logback-smcrypt.xml`（位于核心模块 `smcrypt-spring-boot` 的 `src/main/resources`，

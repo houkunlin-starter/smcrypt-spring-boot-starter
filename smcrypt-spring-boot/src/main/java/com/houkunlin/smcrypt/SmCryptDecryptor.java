@@ -19,8 +19,8 @@ import java.util.Map;
  * 配置文件密文解密引擎（版本无关）。
  *
  * <p>在 Spring Boot 的 {@code EnvironmentPostProcessor} 阶段执行，遍历
- * {@link ConfigurableEnvironment} 中所有 {@link PropertySource}，将 {@code {算法}ENC(...)}
- * 形式的密文解密为明文并替换原值。</p>
+ * {@link ConfigurableEnvironment} 中的 {@link PropertySource}，将 {@link MapPropertySource}
+ * 中 {@code {算法}ENC(...)} 形式的密文解密为明文并替换原值（非 Map 类型的来源不处理）。</p>
  *
  * <p>工作流程：</p>
  * <ol>

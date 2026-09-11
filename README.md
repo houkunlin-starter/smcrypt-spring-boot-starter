@@ -112,9 +112,10 @@ com.houkunlin.smcrypt
 ├── SmCryptCli                  加密 / 解密命令行工具
 ├── SmCryptContext              加解密上下文（属性查询 + 密钥解析）
 ├── BouncyCastleSupport         BouncyCastle Provider 持有
+├── SmCryptLog                  核心日志门面
 ├── SmCryptLogback              启动早期独立日志
 ├── codec/                      编码枚举、Hex/Base64 编解码、自动识别
-├── config/                     算法配置 CipherConfig
+├── config/                     算法配置（CipherConfig、MacAlgorithm）
 ├── handler/                    算法处理器 SPI 及内置实现
 ├── key/                        密钥解析与私钥加载
 └── spi/                        处理器加载器
@@ -255,7 +256,7 @@ public class DemoService {
 
 - 对称算法通过 JCE `Cipher` 实现，支持通过 `transformation` / `mode` / `padding` / `iv` 自定义；
 - 3DES（`DESEDE`）密钥支持 16 字节（2-key，K1=K3）或 24 字节（3-key），属过时算法，仅建议用于兼容遗留系统；
-- 非对称算法仅需提供 **私钥**：解密使用私钥，加密时自动由私钥推导公钥；
+- 非对称算法（RSA / SM2 / ECC）仅需提供 **私钥**：解密使用私钥，加密时自动由私钥推导公钥（SM9 不同，见下）；
 - SM2 密文顺序可通过 `smcrypt.sm2.mode=C1C2C3` 切换；
 - SM2 / ECC 的椭圆曲线由密钥本身决定，无需额外配置；
 - 内置算法均由 BouncyCastle 提供，启动时以显式 Provider 方式使用，不污染全局 JCE Provider。
@@ -266,16 +267,16 @@ public class DemoService {
 
 各算法的安全状态与选型建议如下（新系统请优先选择「推荐」的算法）：
 
-| 算法           | 密钥 / 安全强度             | 安全状态      | 选型建议                                     |
-|----------------|-----------------------------|---------------|----------------------------------------------|
-| AES            | 128 / 192 / 256 位          | 安全          | **推荐**；优先 GCM，避免 ECB                 |
-| SM4            | 128 位                      | 安全          | **推荐**（国密合规）；优先 CBC/GCM，避免 ECB |
-| SM2            | 256 位曲线（约 128 位）     | 安全          | **推荐**（国密合规）；配合 SM3 使用          |
-| RSA            | 依密钥长度                  | 2048 位起安全 | 可用；推荐 3072 位 + OAEP                    |
-| ECC（ECIES）   | 256 位曲线（约 128 位）     | 安全          | 可用；曲线不低于 256 位                      |
-| SM9            | 256 位 BN 曲线（约 128 位） | 安全          | 仅标识密码（IBC）场景；依赖 KGC              |
-| 3DES（DESEDE） | 112 / 168 位                | **已过时**    | 仅兼容遗留系统；NIST 自 2024 年起禁用其加密  |
-| DES            | 56 位                       | **已破解**    | 禁止用于新系统，仅兼容                       |
+| 算法           | 密钥 / 安全强度             | 安全状态      | 选型建议                                                  |
+|----------------|-----------------------------|---------------|-----------------------------------------------------------|
+| AES            | 128 / 192 / 256 位          | 安全          | **推荐**；优先 GCM，避免 ECB                              |
+| SM4            | 128 位                      | 安全          | **推荐**（国密合规）；优先 CBC/GCM，避免 ECB              |
+| SM2            | 256 位曲线（约 128 位）     | 安全          | **推荐**（国密合规）；算法内部使用 SM3 摘要，无需单独配置 |
+| RSA            | 依密钥长度                  | 2048 位起安全 | 可用；推荐 3072 位 + OAEP                                 |
+| ECC（ECIES）   | 256 位曲线（约 128 位）     | 安全          | 可用；曲线不低于 256 位                                   |
+| SM9            | 256 位 BN 曲线（约 128 位） | 安全          | 仅标识密码（IBC）场景；依赖 KGC                           |
+| 3DES（DESEDE） | 112 / 168 位                | **已过时**    | 仅兼容遗留系统；NIST 自 2024 年起禁用其加密               |
+| DES            | 56 位                       | **已破解**    | 禁止用于新系统，仅兼容                                    |
 
 **推荐优先级**
 
@@ -555,7 +556,7 @@ SM9 的密钥材料包含四项，均需提供：
 | `hid`           | 私钥生成函数标识，KEM / 加密为 `03` | 1 字节                        |
 
 - `de` 与 `Ppub-e` 以 hex 或 Base64 提供；`de` 的编码 **不含**主公钥 / 身份 / hid，因此后三者必须另行配置；
-- 仅需解密时，`de` + `Ppub-e` + `identity` + `hid` 缺一不可（身份参与 KDF 输入，主公钥用于重建私钥）。
+- 仅需解密时，`de` + `Ppub-e` + `identity` 缺一不可（身份参与 KDF 输入，主公钥用于重建私钥；`hid` 默认 `03`）。
 
 ### 11.3 配置项
 
@@ -612,7 +613,7 @@ spring.datasource.password=SM9ENC(base64,xxxxxxxx)
 命令行工具未提供 SM9 专用参数，可通过 `SmCryptEncryptor` API 或系统属性使用：
 
 ```text
-System.setProperty("smcrypt.sm9.private-key","BASE64_OF_DE");
+// 加密只需主公钥与身份，无需用户私钥
 System.setProperty("smcrypt.sm9.master-public-key","BASE64_OF_PPUBE");
 System.setProperty("smcrypt.sm9.identity","alice@example.com");
 
@@ -767,7 +768,7 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 ## 十四、日志
 
-- 解密流程日志统一带 `[SMCRYPT]` 前缀，正常解密会打印属性名、算法、来源；
+- 解密引擎的关键日志带 `[SMCRYPT]` 前缀，正常解密会打印属性名、算法、来源；密钥解析、SPI 加载等辅助类的告警/调试日志不带该前缀；
 - 解密发生在 Spring 全局日志系统初始化之前，因此使用 **独立 LoggerContext**，配置为
   `logback-smcrypt.xml`（位于核心模块 `smcrypt-spring-boot` 的 `src/main/resources`，由各 starter 共享）；
 - 可在应用工作目录放置同名 `logback-smcrypt.xml` 覆盖默认早期日志配置；
@@ -813,7 +814,8 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 测试覆盖：
 
-- 核心单元测试：编解码自动识别、六种算法加解密往返、密钥解析、SPI 加载（`META-INF/services` 与
+- 核心单元测试：编解码自动识别、各算法加解密往返（SM4 / SM2 / SM9 / AES / DES / DESEDE / RSA / ECC）、
+  完整性校验（对称算法 MAC 与非对称算法内置校验的篡改检测）、密钥解析、SPI 加载（`META-INF/services` 与
   `spring.factories` 两条路径）、解密引擎对 PropertySource 的替换与来源保留；
 - 各 starter 集成测试：真实启动 `SpringApplication`，验证配置中的密文被解成明文。
 
