@@ -44,6 +44,9 @@ public final class SmCryptKeyGenerator {
     private static final String GOST3412 = "GOST3412";
     private static final String DSTU7624 = "DSTU7624";
     private static final String RC6 = "RC6";
+    private static final String CAMELLIA = "CAMELLIA";
+    private static final String ARIA = "ARIA";
+    private static final String SEED = "SEED";
     private static final String RSA = "RSA";
     private static final String SM2 = "SM2";
     private static final String ECC = "ECC";
@@ -63,7 +66,8 @@ public final class SmCryptKeyGenerator {
     public static boolean isSymmetric(String algorithm) {
         String upper = algorithm.toUpperCase();
         return SM4.equals(upper) || AES.equals(upper) || DES.equals(upper) || DESEDE.equals(upper)
-                || CHACHA20.equals(upper) || GOST3412.equals(upper) || DSTU7624.equals(upper) || RC6.equals(upper);
+                || CHACHA20.equals(upper) || GOST3412.equals(upper) || DSTU7624.equals(upper) || RC6.equals(upper)
+                || CAMELLIA.equals(upper) || ARIA.equals(upper) || SEED.equals(upper);
     }
 
     /**
@@ -247,6 +251,27 @@ public final class SmCryptKeyGenerator {
                     throw new IllegalArgumentException("RC6 密钥长度仅支持 128 / 192 / 256 位");
                 }
                 return requestedBits;
+            case CAMELLIA:
+                if (requestedBits <= 0) {
+                    return 256;
+                }
+                if (requestedBits != 128 && requestedBits != 192 && requestedBits != 256) {
+                    throw new IllegalArgumentException("Camellia 密钥长度仅支持 128 / 192 / 256 位");
+                }
+                return requestedBits;
+            case ARIA:
+                if (requestedBits <= 0) {
+                    return 256;
+                }
+                if (requestedBits != 128 && requestedBits != 192 && requestedBits != 256) {
+                    throw new IllegalArgumentException("ARIA 密钥长度仅支持 128 / 192 / 256 位");
+                }
+                return requestedBits;
+            case SEED:
+                if (requestedBits <= 0 || requestedBits == 128) {
+                    return 128;
+                }
+                throw new IllegalArgumentException("SEED 密钥长度仅支持 128 位");
             default:
                 throw new IllegalArgumentException("不支持的对称算法：" + algorithm);
         }
@@ -261,6 +286,9 @@ public final class SmCryptKeyGenerator {
         }
         if (GOST3412.equals(algorithm)) {
             return "GOST3412-2015";
+        }
+        if (CAMELLIA.equals(algorithm)) {
+            return "Camellia";
         }
         return algorithm;
     }

@@ -46,14 +46,15 @@
 - **零侵入**：业务代码照常使用 `@Value`、`Environment`、`@ConfigurationProperties`，无需感知密文；
 - **多版本兼容**：同一套核心逻辑，分别适配 Spring Boot 2 / 3 / 4；
 - **多算法**：内置国密 SM2 / SM4 / SM9 (标识加密) 及 AES / DES / DESEDE (3DES) / ChaCha20-Poly1305 / GOST3412-2015 /
-  DSTU7624 / RC6 / RSA / ECC；
+  DSTU7624 / RC6 / Camellia / ARIA / SEED / RSA / ECC；
 - **多编码**：支持 hex、Base64，可显式声明或自动识别；
 - **可扩展**：业务系统可通过 SPI 接入自定义算法，或对接加密机（HSM）等外部解密能力。
 
 ## 二、核心特性
 
 - 同时支持 Spring Boot 2 / 3 / 4，按版本选用对应 Starter；
-- 内置算法：SM4、SM2、SM9（标识加密）、AES、DES、DESEDE (3DES)、ChaCha20-Poly1305、GOST3412-2015、DSTU7624、RC6、RSA、ECC（ECIES），基于
+- 内置算法：SM4、SM2、SM9（标识加密）、AES、DES、DESEDE (3DES)
+  、ChaCha20-Poly1305、GOST3412-2015、DSTU7624、RC6、Camellia、ARIA、SEED、RSA、ECC（ECIES），基于
   BouncyCastle；
 - 密文编码支持 hex 与 Base64，可显式声明（`SM4ENC(hex,...)`）或自动识别；
 - 支持 properties、yml/yaml、命令行参数、环境变量等所有 Spring Boot 配置来源；
@@ -241,6 +242,9 @@ public class DemoService {
 | GOST3412 | `GOST3412ENC(...)` |
 | DSTU7624 | `DSTU7624ENC(...)` |
 | RC6      | `RC6ENC(...)`      |
+| CAMELLIA | `CAMELLIAENC(...)` |
+| ARIA     | `ARIAENC(...)`     |
+| SEED     | `SEEDENC(...)`     |
 | RSA      | `RSAENC(...)`      |
 | ECC      | `ECCENC(...)`      |
 
@@ -259,6 +263,9 @@ public class DemoService {
 | GOST3412 | `GOST3412ENC` | `GOST3412-2015/ECB/PKCS5Padding` | 32 字节              | 俄罗斯标准（Kuznyechik）          |
 | DSTU7624 | `DSTU7624ENC` | `DSTU7624/ECB/PKCS5Padding`      | 16 / 32 / 64 字节    | 乌克兰标准（Kalyna）              |
 | RC6      | `RC6ENC`      | `RC6/ECB/PKCS5Padding`           | 16 / 24 / 32 字节    | AES 候选算法，使用较少            |
+| CAMELLIA | `CAMELLIAENC` | `Camellia/ECB/PKCS5Padding`      | 16 / 24 / 32 字节    | 日本 / ISO 地区标准               |
+| ARIA     | `ARIAENC`     | `ARIA/ECB/PKCS5Padding`          | 16 / 24 / 32 字节    | 韩国地区标准                      |
+| SEED     | `SEEDENC`     | `SEED/ECB/PKCS5Padding`          | 16 字节              | 韩国地区标准                      |
 | RSA      | `RSAENC`      | `RSA/ECB/PKCS1Padding`           | RSA 私钥             | 非对称加密                        |
 | ECC      | `ECCENC`      | `ECIES`                          | EC 私钥              | 基于 ECIES 的椭圆曲线加密         |
 
@@ -289,6 +296,9 @@ public class DemoService {
 | GOST3412-2015     | 256 位                      | 安全          | 俄罗斯地区标准（Kuznyechik）                              |
 | DSTU7624          | 128 / 256 / 512 位          | 安全          | 乌克兰地区标准（Kalyna）                                  |
 | RC6               | 128 / 192 / 256 位          | 安全          | 可用但使用较少                                            |
+| Camellia          | 128 / 192 / 256 位          | 安全          | 日本 / ISO 地区标准                                       |
+| ARIA              | 128 / 192 / 256 位          | 安全          | 韩国地区标准                                              |
+| SEED              | 128 位                      | 安全          | 韩国地区标准                                              |
 | 3DES（DESEDE）    | 112 / 168 位                | **已过时**    | 仅兼容遗留系统；NIST 自 2024 年起禁用其加密               |
 | DES               | 56 位                       | **已破解**    | 禁止用于新系统，仅兼容                                    |
 
@@ -385,7 +395,7 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 > `transformation` 优先级最高：一旦配置，`mode` / `padding` 不再参与变换串拼接。
 > `encoding` 只影响 **加密输出**，解密时编码会自动识别，无需配置。
 > 配置 `mac` 后启用 encrypt-then-MAC：加密输出为 `密文 || MAC`，解密前先校验 MAC，校验失败会抛出异常；
-> `mac` / `mac-key` 仅对对称算法（SM4 / AES / DES / DESEDE）有效。
+> `mac` / `mac-key` 仅对对称算法有效。
 
 ### 10.2 算法与参数支持矩阵
 
@@ -400,7 +410,8 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 说明：
 
-- **对称算法**（SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6）：`transformation` / `mode` / `padding` /
+- **对称算法**（SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED）：
+  `transformation` / `mode` / `padding` /
   `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
   `iv`；ChaCha20-Poly1305 为 AEAD，不支持 `mode` / `padding`，需 12 字节 nonce；
 - **完整性校验（MAC）**：仅对称算法支持；配置 `smcrypt.<算法>.mac` 后启用 encrypt-then-MAC（密文载荷为 `密文 || MAC`），
@@ -410,7 +421,8 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 - **SM2**：`mode` 仅用于选择密文顺序（默认 `C1C3C2`），其余参数不生效；
 - `mode` / `padding` 仅在 **未配置** `transformation` 且 **设置了** `mode` 时才参与变换串拼接；只配置 `padding`
   不会改变默认变换串；
-- `iv` 长度必须与算法分组一致：AES / SM4 / GOST3412 / DSTU7624 / RC6 为 16 字节，DES / DESEDE 为 8 字节；GCM 与
+- `iv` 长度必须与算法分组一致：AES / SM4 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED 为 16 字节，DES / DESEDE 为
+  8 字节；GCM 与
   ChaCha20-Poly1305 的 nonce 为 12 字节。
 
 ### 10.3 常用场景示例
@@ -547,7 +559,8 @@ smcrypt.chacha20.iv=00112233445566778899aabb
 
 ChaCha20-Poly1305 自带认证标签，无需再配置 `mac`；不支持 `mode` / `padding`。
 
-> 以上配置项适用于 SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / RSA / ECC 等算法；SM9 的配置项单独见下一节。
+> 以上配置项适用于 SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / CAMELLIA / ARIA / SEED / RSA / ECC
+> 等算法；SM9 的配置项单独见下一节。
 
 ## 十一、SM9 标识加密
 
@@ -804,6 +817,9 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli --generate-key --algorithm SM9
 | GOST3412 | 256（固定）                            | 256  |
 | DSTU7624 | 128 / 256 / 512                        | 256  |
 | RC6      | 128 / 192 / 256                        | 256  |
+| CAMELLIA | 128 / 192 / 256                        | 256  |
+| ARIA     | 128 / 192 / 256                        | 256  |
+| SEED     | 128（固定）                            | 128  |
 | RSA      | 2048 / 3072 / 4096 等                  | 2048 |
 | ECC      | 256 / 384 / 521                        | 256  |
 | SM2      | 256（固定）                            | 256  |
@@ -820,22 +836,22 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 参数说明：
 
-| 参数               | 简写 | 说明                                                                                                                      |
-|--------------------|------|---------------------------------------------------------------------------------------------------------------------------|
-| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `RSA` / `ECC` |
-| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                             |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                            |
-| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                    |
-| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                           |
-| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                 |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                       |
-| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                             |
-| `--iv`             |      | 初始向量（hex / Base64）                                                                                                  |
-| `--decrypt`        |      | 解密模式                                                                                                                  |
-| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                    |
-| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                                                                      |
-| `--identity`       |      | SM9 生成密钥时的身份                                                                                                      |
-| `--help`           | `-h` | 显示帮助                                                                                                                  |
+| 参数               | 简写 | 说明                                                                                                                                                     |
+|--------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `CAMELLIA` / `ARIA` / `SEED` / `RSA` / `ECC` |
+| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                                                            |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                                                           |
+| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                                                   |
+| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                                                          |
+| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                                                |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                                                      |
+| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                                                            |
+| `--iv`             |      | 初始向量（hex / Base64）                                                                                                                                 |
+| `--decrypt`        |      | 解密模式                                                                                                                                                 |
+| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                                                   |
+| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                                                                                                     |
+| `--identity`       |      | SM9 生成密钥时的身份                                                                                                                                     |
+| `--help`           | `-h` | 显示帮助                                                                                                                                                 |
 
 解密示例：
 
@@ -894,7 +910,7 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 测试覆盖：
 
 - 核心单元测试：编解码自动识别、各算法加解密往返（SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 /
-  RC6 / RSA / ECC）、
+  RC6 / CAMELLIA / ARIA / SEED / RSA / ECC）、
   完整性校验（对称算法 MAC 与非对称算法内置校验的篡改检测）、密钥生成与长度校验、密钥解析、SPI 加载（`META-INF/services` 与
   `spring.factories` 两条路径）、解密引擎对 PropertySource 的替换与来源保留；
 - 各 starter 集成测试：真实启动 `SpringApplication`，验证配置中的密文被解成明文。

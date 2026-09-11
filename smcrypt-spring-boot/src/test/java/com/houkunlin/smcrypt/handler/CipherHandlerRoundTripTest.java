@@ -211,6 +211,30 @@ class CipherHandlerRoundTripTest {
     }
 
     @Test
+    void camelliaRoundTrip() throws Exception {
+        CamelliaHandler handler = new CamelliaHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.camellia.key", KEY_256)));
+        String cipher = handler.getEncryptText("camellia-data");
+        assertEquals("camellia-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void ariaRoundTrip() throws Exception {
+        AriaHandler handler = new AriaHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.aria.key", KEY_256)));
+        String cipher = handler.getEncryptText("aria-data");
+        assertEquals("aria-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void seedRoundTrip() throws Exception {
+        SeedHandler handler = new SeedHandler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.seed.key", AES_KEY)));
+        String cipher = handler.getEncryptText("seed-data");
+        assertEquals("seed-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
     void eccRoundTrip() throws Exception {
         KeyPair keyPair = ecKeyPair("secp256r1");
         EccHandler handler = new EccHandler();

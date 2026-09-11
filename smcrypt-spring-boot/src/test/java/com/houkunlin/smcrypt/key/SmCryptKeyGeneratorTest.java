@@ -61,6 +61,20 @@ class SmCryptKeyGeneratorTest {
     }
 
     @Test
+    void generateRegionSymmetricKeyLengths() {
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("CAMELLIA", 256).length());
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("ARIA", 256).length());
+        assertEquals(32, SmCryptKeyGenerator.generateSymmetricKey("SEED", 128).length());
+    }
+
+    @Test
+    void generatedRegionSymmetricKeysRoundTrip() throws Exception {
+        assertSymmetricRoundTrip(new CamelliaHandler(), "CAMELLIA", 256);
+        assertSymmetricRoundTrip(new AriaHandler(), "ARIA", 256);
+        assertSymmetricRoundTrip(new SeedHandler(), "SEED", 128);
+    }
+
+    @Test
     void generatedRsaKeyPairRoundTrip() throws Exception {
         KeyPair keyPair = SmCryptKeyGenerator.generateKeyPair("RSA", 2048);
         RsaHandler handler = new RsaHandler();
