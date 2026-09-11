@@ -2,6 +2,7 @@ package com.houkunlin.smcrypt;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 核心内部日志门面。
@@ -27,7 +28,7 @@ public final class SmCryptLog {
     /**
      * 当前活动的早期日志上下文；为 null 时回退到控制台输出
      */
-    private static volatile SmCryptLogback active;
+    private static final AtomicReference<SmCryptLogback> ACTIVE = new AtomicReference<>();
 
     /**
      * 工具类，禁止实例化
@@ -41,14 +42,14 @@ public final class SmCryptLog {
      * @param logback 早期日志上下文
      */
     public static void setActive(SmCryptLogback logback) {
-        active = logback;
+        ACTIVE.set(logback);
     }
 
     /**
      * 清除当前活动的早期日志上下文
      */
     public static void clearActive() {
-        active = null;
+        ACTIVE.set(null);
     }
 
     /**
@@ -104,7 +105,7 @@ public final class SmCryptLog {
      */
     @SuppressWarnings("java:S106")
     private static void log(LogLevel level, String format, Object... args) {
-        SmCryptLogback logback = active;
+        SmCryptLogback logback = ACTIVE.get();
         if (logback != null) {
             logback.logMessage(level, format, args);
             return;
@@ -136,13 +137,15 @@ public final class SmCryptLog {
     private static String formatMessage(String format, Object... args) {
         StringBuilder message = new StringBuilder();
         int argIndex = 0;
-        for (int i = 0; i < format.length(); i++) {
-            if (format.charAt(i) == '{' && i + 1 < format.length() && format.charAt(i + 1) == '}'
+        int index = 0;
+        while (index < format.length()) {
+            if (format.charAt(index) == '{' && index + 1 < format.length() && format.charAt(index + 1) == '}'
                     && argIndex < args.length && !(args[argIndex] instanceof Throwable)) {
                 message.append(args[argIndex++]);
-                i++;
+                index += 2;
             } else {
-                message.append(format.charAt(i));
+                message.append(format.charAt(index));
+                index++;
             }
         }
         return message.toString();

@@ -284,12 +284,15 @@ public class SmCryptLogback {
         // 回退输出：解析 {} 占位符并打印到控制台
         StringBuilder message = new StringBuilder();
         int argIndex = 0;
-        for (int i = 0; i < format.length(); i++) {
-            if (format.charAt(i) == '{' && i + 1 < format.length() && format.charAt(i + 1) == '}' && argIndex < args.length) {
+        int index = 0;
+        while (index < format.length()) {
+            if (format.charAt(index) == '{' && index + 1 < format.length() && format.charAt(index + 1) == '}'
+                    && argIndex < args.length) {
                 message.append(args[argIndex++]);
-                i++;
+                index += 2;
             } else {
-                message.append(format.charAt(i));
+                message.append(format.charAt(index));
+                index++;
             }
         }
         Throwable throwable = getThrowable(args);

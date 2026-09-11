@@ -106,19 +106,24 @@ public class SmCryptCli {
      */
     private static Map<String, String> parse(String[] args) {
         Map<String, String> options = new LinkedHashMap<>();
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
+        int index = 0;
+        while (index < args.length) {
+            String arg = args[index];
             if (!arg.startsWith("-")) {
+                index++;
                 continue;
             }
             String name = arg.replaceFirst("^--?", "");
             int equals = name.indexOf('=');
             if (equals >= 0) {
                 options.put(name.substring(0, equals), name.substring(equals + 1));
-            } else if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
-                options.put(name, args[++i]);
+                index++;
+            } else if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+                options.put(name, args[index + 1]);
+                index += 2;
             } else {
                 options.put(name, "");
+                index++;
             }
         }
         return options;
