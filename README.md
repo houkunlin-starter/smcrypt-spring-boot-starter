@@ -255,16 +255,21 @@ public class DemoService {
 
 ### 来源优先级
 
-按算法分别解析，优先级从高到低：
+在 Spring Boot 应用中，密钥的最终取值由 Spring `Environment` 决定，真实优先级（从高到低）为：
 
-1. Spring 配置属性 `smcrypt.<算法>.key`（也包含命令行参数 `--smcrypt.<算法>.key=...`）；
-2. JVM 参数 `-Dsmcrypt.<算法>.key=...`；
-3. 环境变量 `SMCRYPT_<算法>_KEY`（算法名大写，如 `SMCRYPT_SM4_KEY`）；
-4. 密钥文件 `smcrypt.<算法>.file`（可由属性、JVM 参数或环境变量 `SMCRYPT_<算法>_FILE` 指定，
-   支持 `file:` / `classpath:` 前缀）；
+1. 命令行参数 `--smcrypt.<算法>.key=...` / `--smcrypt.<算法>.file=...`；
+2. JVM 系统属性 `-Dsmcrypt.<算法>.key=...` / `-Dsmcrypt.<算法>.file=...`；
+3. 操作系统环境变量 `SMCRYPT_<算法>_KEY` / `SMCRYPT_<算法>_FILE`（算法名大写，如 `SMCRYPT_SM4_KEY`）；
+4. 配置文件 `application.yml` / `application.properties` 中的 `smcrypt.<算法>.key` / `smcrypt.<算法>.file`；
 5. 默认密钥文件：`smcrypt-<算法>.key` 或 `smcrypt-<算法>.properties`（先文件系统、后 classpath）。
 
 其中 `<算法>` 使用小写名称：`sm4`、`sm2`、`aes`、`des`、`rsa`、`ecc`。
+
+> 说明：第 1~3 项由 Spring 的 `commandLineArgs` / `systemProperties` / `systemEnvironment` 属性源提供，
+> 它们的优先级都高于配置文件，因此即使 `application.yml` 中已经配置了密钥，也可以通过
+> `-Dsmcrypt.<算法>.key=...` 或环境变量进行覆盖。`SecretKeyResolver` 中显式的 `System.getProperty` /
+> `System.getenv` 查找仅用于 `SmCryptCli` 等非 Spring 场景兜底。空字符串视为未配置，会继续向下查找。
+> 另外，`smcrypt.<算法>.file` 指定的密钥文件支持 `file:` / `classpath:` 前缀。
 
 ### 密钥文件格式
 
