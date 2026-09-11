@@ -58,7 +58,7 @@
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
 - 解密失败仅记录日志并跳过该属性，不会导致整个应用启动崩溃；
 - 保留 SPI 扩展接口，业务方可接入自定义算法或加密机，并覆盖内置实现；
-- 提供加密 API 与命令行工具，便于生成配置密文和联调测试；
+- 提供密钥生成、加密 API 与命令行工具，便于生成密钥与配置密文；
 - 启动早期使用独立日志上下文，不会干扰 Spring Boot 全局日志系统。
 
 ## 三、工作原理
@@ -117,7 +117,7 @@ com.houkunlin.smcrypt
 ├── codec/                      编码枚举、Hex/Base64 编解码、自动识别
 ├── config/                     算法配置（CipherConfig、MacAlgorithm）
 ├── handler/                    算法处理器 SPI 及内置实现
-├── key/                        密钥解析与私钥加载
+├── key/                        密钥解析、私钥加载与密钥生成
 └── spi/                        处理器加载器
 ```
 
@@ -735,6 +735,52 @@ String cipher = encryptor.encrypt("SM4", "hello");
 String plain = encryptor.decrypt(cipher);
 ```
 
+### 生成密钥
+
+API 方式（`com.houkunlin.smcrypt.key.SmCryptKeyGenerator`）：
+
+```text
+// 对称密钥（返回 hex 字符串）
+String aesKey = SmCryptKeyGenerator.generateSymmetricKey("AES", 256);
+
+// 非对称密钥对（RSA / ECC / SM2）
+KeyPair keyPair = SmCryptKeyGenerator.generateKeyPair("RSA", 3072);
+String privateKeyPem = SmCryptKeyGenerator.toPrivateKeyPem(keyPair.getPrivate());
+String privateKeyBase64 = SmCryptKeyGenerator.toPrivateKeyBase64(keyPair.getPrivate());
+
+// SM9：生成 KGC 主密钥对与指定身份的用户私钥
+Sm9KeyMaterial material = SmCryptKeyGenerator.generateSm9Key(
+        "alice@example.com".getBytes(StandardCharsets.UTF_8), (byte) 0x03);
+```
+
+命令行方式：
+
+```bash
+# 生成 AES-256 密钥（输出 hex）
+java -cp app.jar com.houkunlin.smcrypt.SmCryptCli --generate-key --algorithm AES --key-length 256
+
+# 生成 RSA-3072 私钥（输出 PEM）
+java -cp app.jar com.houkunlin.smcrypt.SmCryptCli --generate-key --algorithm RSA --key-length 3072
+
+# 生成 SM9 密钥（输出 smcrypt.sm9.* 配置项）
+java -cp app.jar com.houkunlin.smcrypt.SmCryptCli --generate-key --algorithm SM9 --identity alice@example.com
+```
+
+`--key-length` 支持的密钥长度（单位：位；未指定时使用默认值）：
+
+| 算法   | 可用长度                               | 默认 |
+|--------|----------------------------------------|------|
+| SM4    | 128                                    | 128  |
+| AES    | 128 / 192 / 256                        | 256  |
+| DES    | 56 / 64                                | 56   |
+| DESEDE | 112 / 128（2-key）、168 / 192（3-key） | 168  |
+| RSA    | 2048 / 3072 / 4096 等                  | 2048 |
+| ECC    | 256 / 384 / 521                        | 256  |
+| SM2    | 256（固定）                            | 256  |
+
+> 本工具只负责 **生成密钥**；密钥长度由算法与 `--key-length` 决定，与「加密生成密文」是两个独立步骤。
+> 使用对称密钥加密时，AES/DES 的密钥长度即由所提供密钥的字节数决定（见「8.1 使用注意」）。
+
 ### 命令行方式
 
 ```bash
@@ -744,19 +790,22 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 参数说明：
 
-| 参数               | 简写 | 说明                                                               |
-|--------------------|------|--------------------------------------------------------------------|
-| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `AES` / `DES` / `DESEDE` / `RSA` / `ECC` |
-| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                      |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                     |
-| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                             |
-| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                    |
-| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                          |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                |
-| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                      |
-| `--iv`             |      | 初始向量（hex / Base64）                                           |
-| `--decrypt`        |      | 解密模式                                                           |
-| `--help`           | `-h` | 显示帮助                                                           |
+| 参数               | 简写 | 说明                                                                       |
+|--------------------|------|----------------------------------------------------------------------------|
+| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `RSA` / `ECC` |
+| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                              |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                             |
+| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                     |
+| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                            |
+| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                  |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                        |
+| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                              |
+| `--iv`             |      | 初始向量（hex / Base64）                                                   |
+| `--decrypt`        |      | 解密模式                                                                   |
+| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）     |
+| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                       |
+| `--identity`       |      | SM9 生成密钥时的身份                                                       |
+| `--help`           | `-h` | 显示帮助                                                                   |
 
 解密示例：
 

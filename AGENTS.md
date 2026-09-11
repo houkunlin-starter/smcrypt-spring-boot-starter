@@ -19,8 +19,9 @@
 ## 模块与职责
 
 - `smcrypt-spring-boot`：版本无关核心（Java 8）。包含 `codec`（编解码）、`handler`（算法处理器）、
-  `key`（密钥解析）、`config`（算法配置）、`spi`（处理器加载）、`SmCryptDecryptor`（解密引擎）、
-  `SmCryptEncryptor` / `SmCryptCli`（加密工具）。`compileOnly` 依赖 Spring Boot 2.7，不得引用 Boot 3/4 专有 API。
+  `key`（密钥解析、私钥加载与密钥生成）、`config`（算法配置）、`spi`（处理器加载）、`SmCryptDecryptor`（解密引擎）、
+  `SmCryptEncryptor` / `SmCryptKeyGenerator` / `SmCryptCli`（加密与密钥生成工具）。`compileOnly` 依赖 Spring Boot 2.7，不得引用
+  Boot 3/4 专有 API。
 - `smcrypt-spring-boot2/3/4-starter`：各自仅有一个薄适配器 `SmCryptEnvironmentPostProcessor`，
   实现对应版本的 `EnvironmentPostProcessor` 并委托核心引擎。Boot 4 的接口位于 `org.springframework.boot`
   （2/3 位于 `org.springframework.boot.env`）。
