@@ -60,6 +60,8 @@
 部署前建议逐项检查：
 
 - **启用 fail-fast**：设置 `smcrypt.fail-fast=true`，让密钥缺失或解密失败在启动阶段直接暴露，而不是带着未解密的密文继续启动；
+- **启用严格体检**：设置 `smcrypt.strict=warn`（灰度观察）或 `smcrypt.strict=fail`（直接阻断），在启动阶段检查并拦截
+  ECB 模式、DES / 3DES、RSA PKCS#1 v1.5 与密钥长度不足、Jasypt 旧算法、PBE 固定盐 / 弱派生参数等弱配置；
 - **选择安全算法与模式**：对称优先 `AES-256-GCM` / `SM4-GCM`；非对称优先 `RSA-3072 + OAEP` / `SM2`；避免 ECB、DES / 3DES、RSA
   PKCS#1 v1.5；
 - **配置随机且不复用的 IV / nonce**：GCM 复用 IV 会导致密钥流泄露；

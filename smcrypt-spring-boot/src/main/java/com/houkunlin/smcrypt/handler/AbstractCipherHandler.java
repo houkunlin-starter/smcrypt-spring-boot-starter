@@ -156,9 +156,11 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
     /**
      * 解析当前算法的配置
      *
+     * <p>结果会被缓存，供加解密流程与安全体检（{@code SmCryptSecurityChecker}）复用。</p>
+     *
      * @return 算法配置
      */
-    protected CipherConfig resolveConfig() {
+    public CipherConfig resolveConfig() {
         if (resolvedConfig == null) {
             resolvedConfig = context().resolveConfig(algorithm(), jceAlgorithm(), defaultTransformation(), defaultEncoding());
         }

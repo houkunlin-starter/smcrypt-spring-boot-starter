@@ -1,5 +1,6 @@
 package com.houkunlin.smcrypt;
 
+import com.houkunlin.smcrypt.config.StrictMode;
 import com.houkunlin.smcrypt.handler.DecryptHandler;
 import com.houkunlin.smcrypt.spi.CipherHandlerLoader;
 import org.springframework.boot.SpringApplication;
@@ -51,6 +52,10 @@ public class SmCryptDecryptor {
      * 是否在解密失败时中断启动的配置项；默认 false（记录日志并跳过）
      */
     private static final String FAIL_FAST_PROPERTY = "smcrypt.fail-fast";
+    /**
+     * 安全体检严格程度配置项；默认 off（不体检）
+     */
+    private static final String STRICT_PROPERTY = "smcrypt.strict";
 
     /**
      * 执行配置文件密文解密
@@ -65,6 +70,7 @@ public class SmCryptDecryptor {
             logback.logMessage(LogLevel.INFO, "[SMCRYPT] 正在执行 {} ，即将对配置文件属性值的密文进行解密处理", getClass().getName());
             SmCryptContext context = SmCryptContext.fromEnvironment(environment);
             List<DecryptHandler> handlers = new CipherHandlerLoader().load(context);
+            checkSecurity(context, handlers, logback);
             boolean failFast = isFailFast(context);
             MutablePropertySources propertySources = environment.getPropertySources();
             if (!hasCipherText(propertySources, handlers)) {
@@ -222,6 +228,30 @@ public class SmCryptDecryptor {
             }
         }
         return null;
+    }
+
+    /**
+     * 执行加密配置安全体检
+     *
+     * <p>按 {@code smcrypt.strict} 决定行为：{@code off} 跳过；{@code warn} 仅打印告警；
+     * {@code fail} 在存在问题时抛出异常中断启动（不受 {@code smcrypt.fail-fast} 影响）。</p>
+     *
+     * @param context  加解密上下文
+     * @param handlers 密文处理器列表
+     * @param logback  日志工具
+     */
+    private void checkSecurity(SmCryptContext context, List<DecryptHandler> handlers, SmCryptLogback logback) {
+        StrictMode strict = StrictMode.fromToken(context.getProperty(STRICT_PROPERTY));
+        if (strict == StrictMode.OFF) {
+            return;
+        }
+        List<String> issues = new SmCryptSecurityChecker().check(context, handlers);
+        for (String issue : issues) {
+            logback.logMessage(LogLevel.WARN, "[SMCRYPT] 安全告警：{}", issue);
+        }
+        if (strict == StrictMode.FAIL && !issues.isEmpty()) {
+            throw new IllegalStateException("检测到不安全的加密配置（smcrypt.strict=fail）：" + String.join("；", issues));
+        }
     }
 
     /**

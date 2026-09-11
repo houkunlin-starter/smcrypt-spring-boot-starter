@@ -95,6 +95,36 @@ class SmCryptDecryptorTest {
         }
     }
 
+    @Test
+    void strictFailThrowsOnWeakConfig() {
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new MapPropertySource("testSource", weakConfigSource("fail")));
+        assertThrows(IllegalStateException.class,
+                () -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
+    }
+
+    @Test
+    void strictWarnDoesNotThrowOnWeakConfig() {
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new MapPropertySource("testSource", weakConfigSource("warn")));
+        assertDoesNotThrow(() -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
+    }
+
+    @Test
+    void strictOffSkipsCheck() {
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new MapPropertySource("testSource", weakConfigSource("off")));
+        assertDoesNotThrow(() -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
+    }
+
+    private Map<String, Object> weakConfigSource(String strict) {
+        Map<String, Object> source = new HashMap<>();
+        // SM4 未配置 transformation/mode，默认使用 ECB，属于弱配置
+        source.put("smcrypt.sm4.key", SM4_KEY);
+        source.put("smcrypt.strict", strict);
+        return source;
+    }
+
     private Map<String, Object> encryptedSource() throws Exception {
         Map<String, String> properties = new HashMap<>();
         properties.put("smcrypt.sm4.key", SM4_KEY);

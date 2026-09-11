@@ -8,6 +8,8 @@
 ### 新增
 
 - 全局配置 `smcrypt.fail-fast`：解密失败（含未找到密钥）时中断应用启动。
+- 全局配置 `smcrypt.strict`：启动阶段执行加密配置安全体检（`off` / `warn` / `fail`），可拦截 ECB、DES / 3DES、
+  RSA PKCS#1 / 弱密钥、Jasypt 旧算法、PBE 固定盐 / 弱派生参数等弱配置。
 - 密钥编码配置 `smcrypt.<算法>.key-encoding` / `smcrypt.<算法>.mac-key-encoding`
   （`hex` / `base64` / `plain`），用于消除密钥自动识别的歧义。
 - CLI 支持 `--key -` / `--password -` 从标准输入读取密钥 / 口令，避免进入命令历史。
