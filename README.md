@@ -144,6 +144,7 @@ implementation 'com.houkunlin:smcrypt-spring-boot4-starter:1.0.0'
 Maven：
 
 ```xml
+
 <dependency>
     <groupId>com.houkunlin</groupId>
     <artifactId>smcrypt-spring-boot3-starter</artifactId>
@@ -291,31 +292,141 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 ## 十、配置项参考
 
-所有配置项均以 `smcrypt.<算法>.<项>` 命名，均有默认值。
+所有配置项均以 `smcrypt.<算法>.<项>` 命名，其中 `<算法>` 使用小写名称
+（`sm4`、`sm2`、`aes`、`des`、`rsa`、`ecc`），未配置时使用默认值。
 
-| 配置项                          | 说明                                 | 默认值         |
-|---------------------------------|--------------------------------------|----------------|
-| `smcrypt.<算法>.key`            | 密钥内容                             | 无             |
-| `smcrypt.<算法>.file`           | 密钥文件（`file:` / `classpath:`）   | 无             |
-| `smcrypt.<算法>.transformation` | 完整 JCE 变换串，优先级最高          | 见算法表       |
-| `smcrypt.<算法>.mode`           | 加密模式，与 padding 组合生成变换串  | 见算法表       |
-| `smcrypt.<算法>.padding`        | 填充方式                             | `PKCS5Padding` |
-| `smcrypt.<算法>.iv`             | 初始向量（hex / Base64）             | 无             |
-| `smcrypt.<算法>.encoding`       | 加密输出所用编码（`hex` / `base64`） | `base64`       |
+### 10.1 配置项总览
 
-示例：
+| 配置项                          | 说明                                                                      | 默认值         |
+|---------------------------------|---------------------------------------------------------------------------|----------------|
+| `smcrypt.<算法>.key`            | 密钥内容（对称：hex / Base64 / 口令；非对称：PEM / Base64(DER)）          | 无             |
+| `smcrypt.<算法>.file`           | 密钥文件（`file:` / `classpath:`，`.properties` 读 `key` / `secret_key`） | 无             |
+| `smcrypt.<算法>.transformation` | 完整 JCE 变换串，优先级最高                                               | 见算法表       |
+| `smcrypt.<算法>.mode`           | 加密模式，与 `padding` 组合生成变换串                                     | 见算法表       |
+| `smcrypt.<算法>.padding`        | 填充方式                                                                  | `PKCS5Padding` |
+| `smcrypt.<算法>.iv`             | 初始向量（hex / Base64，自动识别）                                        | 无             |
+| `smcrypt.<算法>.encoding`       | 加密输出所用编码（`hex` / `base64`）                                      | `base64`       |
+
+> `transformation` 优先级最高：一旦配置，`mode` / `padding` 不再参与变换串拼接。
+> `encoding` 只影响 **加密输出**，解密时编码会自动识别，无需配置。
+
+### 10.2 算法与参数支持矩阵
+
+| 配置项           | SM4 / AES / DES（对称） | RSA                                   | ECC（ECIES）         | SM2                    |
+|------------------|-------------------------|---------------------------------------|----------------------|------------------------|
+| `transformation` | 支持                    | 支持                                  | 支持（默认 `ECIES`） | 不生效                 |
+| `mode`           | 支持                    | 参与拼接（建议改用 `transformation`） | 不可设置             | 仅 `C1C3C2` / `C1C2C3` |
+| `padding`        | 支持                    | 参与拼接（建议改用 `transformation`） | 不可设置             | 不生效                 |
+| `iv`             | 支持（非 ECB 模式）     | 不适用                                | 不适用               | 不适用                 |
+| `encoding`       | 支持                    | 支持                                  | 支持                 | 支持                   |
+
+说明：
+
+- **SM4 / AES / DES**：`transformation` / `mode` / `padding` / `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
+  `iv`；
+- **RSA**：建议直接用 `transformation` 指定填充，如 `RSA/ECB/PKCS1Padding`、`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`；
+- **ECC**：基于 ECIES，仅使用 `transformation`（默认 `ECIES`）， **不要**配置 `mode` / `padding`，否则会拼出非法变换串；
+- **SM2**：`mode` 仅用于选择密文顺序（默认 `C1C3C2`），其余参数不生效；
+- `mode` / `padding` 仅在 **未配置** `transformation` 且 **设置了** `mode` 时才参与变换串拼接；只配置 `padding`
+  不会改变默认变换串；
+- `iv` 长度必须与算法分组一致：AES / SM4 为 16 字节（32 位 hex），DES 为 8 字节（16 位 hex）；GCM 推荐 12 字节。
+
+### 10.3 常用场景示例
+
+#### 场景 1：默认零配置（ECB）
+
+对称算法默认使用 `ECB/PKCS5Padding`，只需配置密钥即可：
 
 ```properties
-# 使用 CBC 模式与自定义 IV
-smcrypt.aes.mode=CBC
-smcrypt.aes.iv=00112233445566778899aabbccddeeff
-# 使用 GCM 模式（完整变换串优先）
-smcrypt.aes.transformation=AES/GCM/NoPadding
-# 加密输出使用 hex 编码
-smcrypt.sm4.encoding=hex
+# SM4
+smcrypt.sm4.key=0123456789abcdeffedcba9876543210
+# AES
+smcrypt.aes.key=00112233445566778899aabbccddeeff
+# DES
+smcrypt.des.key=0123456789abcdef
 ```
 
-> 注意：`transformation` 优先级最高，配置后 `mode` / `padding` 不再参与变换串拼接。
+#### 场景 2：CBC 模式 + 自定义 IV
+
+```properties
+smcrypt.aes.mode=CBC
+smcrypt.aes.padding=PKCS5Padding
+# 16 字节 IV（32 位 hex）
+smcrypt.aes.iv=00112233445566778899aabbccddeeff
+```
+
+#### 场景 3：GCM（AEAD，无需 padding）
+
+```properties
+# GCM 必须使用 NoPadding，并显式提供 IV（推荐 12 字节）
+smcrypt.aes.transformation=AES/GCM/NoPadding
+smcrypt.aes.iv=00112233445566778899aabb
+```
+
+#### 场景 4：国密 SM4（ECB / CBC）
+
+```properties
+# 默认 ECB
+smcrypt.sm4.key=0123456789abcdeffedcba9876543210
+# 如需 CBC，需配置 16 字节 IV
+smcrypt.sm4.mode=CBC
+smcrypt.sm4.iv=0123456789abcdeffedcba9876543210
+```
+
+#### 场景 5：SM2 切换密文顺序
+
+```properties
+# 默认 C1C3C2
+smcrypt.sm2.key=-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----
+# 对方系统使用 C1C2C3 时切换
+smcrypt.sm2.mode=C1C2C3
+```
+
+#### 场景 6：RSA 使用 OAEP 填充
+
+```properties
+smcrypt.rsa.transformation=RSA/ECB/OAEPWithSHA-256AndMGF1Padding
+smcrypt.rsa.key=-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----
+```
+
+#### 场景 7：加密输出使用 hex 编码
+
+```properties
+smcrypt.sm4.encoding=hex
+# 生成结果形如：SM4ENC(hex,0123abcd...)
+```
+
+#### 场景 8：密钥来源（文件 / 环境变量 / JVM 参数）
+
+```properties
+# 1) 直接配置密钥
+smcrypt.aes.key=00112233445566778899aabbccddeeff
+# 2) 从文件加载（file: 或 classpath:）
+smcrypt.aes.file=classpath:keys/aes.key
+# 3) 从非对称私钥文件加载（PEM）
+smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
+```
+
+```bash
+# 4) 环境变量（算法名大写）
+SMCRYPT_AES_KEY=00112233445566778899aabbccddeeff
+# 5) JVM 参数（可覆盖 application.yml 中的同名配置）
+java -Dsmcrypt.aes.key=00112233445566778899aabbccddeeff -jar app.jar
+```
+
+#### 场景 9：YAML 配置写法
+
+```yaml
+smcrypt:
+  sm4:
+    key: 0123456789abcdeffedcba9876543210
+    mode: CBC
+    iv: 0123456789abcdeffedcba9876543210
+  aes:
+    transformation: AES/GCM/NoPadding
+    iv: 00112233445566778899aabb
+    encoding: hex
+```
 
 ## 十一、自定义算法 / 加密机接入
 
@@ -412,7 +523,7 @@ import com.houkunlin.smcrypt.SmCryptEncryptor;
 import org.springframework.core.io.FileSystemResourceLoader;
 
 // 通过系统属性提供密钥
-System.setProperty("smcrypt.sm4.key", "0123456789abcdeffedcba9876543210");
+System.setProperty("smcrypt.sm4.key","0123456789abcdeffedcba9876543210");
 
 SmCryptEncryptor encryptor = new SmCryptEncryptor(
         new SmCryptContext(System::getProperty, new FileSystemResourceLoader()));
