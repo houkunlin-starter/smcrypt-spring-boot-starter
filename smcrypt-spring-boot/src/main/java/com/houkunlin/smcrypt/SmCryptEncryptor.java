@@ -14,9 +14,10 @@ import java.util.Map;
  *
  * <p>示例：</p>
  * <pre>{@code
- * System.setProperty("smcrypt.sm4.key", "0123456789abcdeffedcba9876543210");
+ * Map<String, String> properties = new HashMap<>();
+ * properties.put("smcrypt.sm4.key", "0123456789abcdeffedcba9876543210");
  * SmCryptEncryptor encryptor = new SmCryptEncryptor(
- *         new SmCryptContext(System::getProperty, new FileSystemResourceLoader()));
+ *         new SmCryptContext(properties::get, new FileSystemResourceLoader()));
  * String cipherText = encryptor.encrypt("SM4", "hello");
  * // SM4ENC(base64,....)
  * }</pre>

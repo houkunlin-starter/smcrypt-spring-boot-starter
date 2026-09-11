@@ -58,11 +58,11 @@ public class JasyptCipherHandler extends AbstractPbeCipherHandler {
 
     @Override
     protected byte[] doDecrypt(byte[] payload, CipherConfig config) throws Exception {
-        return jceDecrypt(payload, config);
+        return jceDecrypt(payload);
     }
 
     @Override
     protected byte[] doEncrypt(byte[] plainBytes, CipherConfig config) throws Exception {
-        return jceEncrypt(plainBytes, config);
+        return jceEncrypt(plainBytes);
     }
 }

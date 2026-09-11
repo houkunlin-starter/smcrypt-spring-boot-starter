@@ -70,12 +70,12 @@ public class PbeCipherHandler extends AbstractPbeCipherHandler {
 
     @Override
     protected byte[] doDecrypt(byte[] payload, CipherConfig config) throws Exception {
-        return isJceMode() ? jceDecrypt(payload, config) : kdfDecrypt(payload, config);
+        return isJceMode() ? jceDecrypt(payload) : kdfDecrypt(payload, config);
     }
 
     @Override
     protected byte[] doEncrypt(byte[] plainBytes, CipherConfig config) throws Exception {
-        return isJceMode() ? jceEncrypt(plainBytes, config) : kdfEncrypt(plainBytes, config);
+        return isJceMode() ? jceEncrypt(plainBytes) : kdfEncrypt(plainBytes, config);
     }
 
     private boolean isJceMode() {

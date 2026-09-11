@@ -10,6 +10,7 @@ import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.util.Locale;
@@ -147,6 +148,10 @@ public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandl
         } catch (InvalidKeyException e) {
             throw new IllegalArgumentException("密钥长度不符合 " + algorithm() + " 算法要求（当前 " + key.length
                     + " 字节），请检查 smcrypt." + algorithm().toLowerCase(Locale.ROOT) + ".key：" + e.getMessage(), e);
+        } catch (InvalidAlgorithmParameterException e) {
+            int ivLength = config.hasIv() ? config.iv().length : 0;
+            throw new IllegalArgumentException("初始向量（IV）不符合 " + algorithm() + " 算法要求（当前 " + ivLength
+                    + " 字节），请检查 smcrypt." + algorithm().toLowerCase(Locale.ROOT) + ".iv：" + e.getMessage(), e);
         }
     }
 }

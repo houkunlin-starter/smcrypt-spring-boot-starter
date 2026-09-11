@@ -1,6 +1,5 @@
 package com.houkunlin.smcrypt.pbe;
 
-import com.houkunlin.smcrypt.config.CipherConfig;
 import com.houkunlin.smcrypt.handler.AbstractCipherHandler;
 import org.bouncycastle.util.Arrays;
 
@@ -121,11 +120,10 @@ public abstract class AbstractPbeCipherHandler extends AbstractCipherHandler {
      * 使用 JCE PBE 变换加密
      *
      * @param plainBytes 明文
-     * @param config     算法配置（用于编码）
      * @return 载荷 {@code salt ‖ iv ‖ cipher}
      * @throws Exception 加密失败时抛出
      */
-    protected byte[] jceEncrypt(byte[] plainBytes, CipherConfig config) throws Exception {
+    protected byte[] jceEncrypt(byte[] plainBytes) throws Exception {
         String transformation = property("transformation", defaultPbeTransformation());
         int iterations = intProperty("iterations", DEFAULT_JCE_ITERATIONS);
         String provider = property("provider");
@@ -145,11 +143,10 @@ public abstract class AbstractPbeCipherHandler extends AbstractCipherHandler {
      * 使用 JCE PBE 变换解密
      *
      * @param payload 载荷 {@code salt ‖ iv ‖ cipher}
-     * @param config  算法配置（用于编码）
      * @return 明文
      * @throws Exception 解密失败时抛出
      */
-    protected byte[] jceDecrypt(byte[] payload, CipherConfig config) throws Exception {
+    protected byte[] jceDecrypt(byte[] payload) throws Exception {
         String transformation = property("transformation", defaultPbeTransformation());
         int iterations = intProperty("iterations", DEFAULT_JCE_ITERATIONS);
         String provider = property("provider");
