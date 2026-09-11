@@ -3,8 +3,6 @@ package com.houkunlin.smcrypt;
 import com.houkunlin.smcrypt.handler.DecryptHandler;
 import com.houkunlin.smcrypt.spi.CipherHandlerLoader;
 
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -40,11 +38,7 @@ public class SmCryptEncryptor {
      * @param context 加解密上下文
      */
     public SmCryptEncryptor(SmCryptContext context) {
-        List<DecryptHandler> loaded = new CipherHandlerLoader().load(context);
-        this.handlers = new LinkedHashMap<>();
-        for (DecryptHandler handler : loaded) {
-            handlers.put(handler.algorithm().toUpperCase(Locale.ROOT), handler);
-        }
+        this.handlers = new CipherHandlerLoader().loadMap(context);
     }
 
     /**

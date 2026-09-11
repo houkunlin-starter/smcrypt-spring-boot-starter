@@ -33,6 +33,18 @@ public class CipherHandlerLoader {
      * @return 处理器列表（按加载顺序，业务实现覆盖内置实现）
      */
     public List<DecryptHandler> load(SmCryptContext context) {
+        return new ArrayList<>(loadMap(context).values());
+    }
+
+    /**
+     * 加载全部处理器并注入上下文，按算法名称（大写）建立索引
+     *
+     * <p>用于需要按算法名称快速查找处理器的场景（如加密工具），避免调用方重复构建映射。</p>
+     *
+     * @param context 加解密上下文
+     * @return 算法名称（大写）到处理器的有序映射（业务实现覆盖内置实现）
+     */
+    public Map<String, DecryptHandler> loadMap(SmCryptContext context) {
         ClassLoader classLoader = resolveClassLoader();
         Map<String, DecryptHandler> handlers = new LinkedHashMap<>();
         for (DecryptHandler handler : builtinHandlers()) {
@@ -41,13 +53,12 @@ public class CipherHandlerLoader {
         loadServiceHandlers(classLoader, handlers);
         loadSpringFactoriesHandlers(classLoader, handlers);
 
-        List<DecryptHandler> result = new ArrayList<>(handlers.values());
-        for (DecryptHandler handler : result) {
+        for (DecryptHandler handler : handlers.values()) {
             if (handler instanceof DecryptHandlerAware) {
                 ((DecryptHandlerAware) handler).setContext(context);
             }
         }
-        return result;
+        return handlers;
     }
 
     /**
