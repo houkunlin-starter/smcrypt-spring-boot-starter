@@ -59,6 +59,15 @@ class PbeCipherHandlerTest {
     }
 
     @Test
+    void kdfCustomSaltSizeRoundTrip() throws Exception {
+        Map<String, String> properties = kdfProperties("AES/GCM/NoPadding", "PBKDF2");
+        properties.put("smcrypt.pbe.kdf.salt-size", "24");
+        PbeCipherHandler handler = new PbeCipherHandler();
+        handler.setContext(TestContexts.context(properties));
+        assertEquals("pbe-salt24", handler.getDecryptText(handler.getEncryptText("pbe-salt24")));
+    }
+
+    @Test
     void jceModeRoundTrip() throws Exception {
         Map<String, String> properties = new HashMap<>();
         properties.put("smcrypt.pbe.password", PASSWORD);
@@ -67,6 +76,19 @@ class PbeCipherHandlerTest {
         PbeCipherHandler handler = new PbeCipherHandler();
         handler.setContext(TestContexts.context(properties));
         assertEquals("jce-data", handler.getDecryptText(handler.getEncryptText("jce-data")));
+    }
+
+    @Test
+    void jceCustomSaltAndIvSizeRoundTrip() throws Exception {
+        Map<String, String> properties = new HashMap<>();
+        properties.put("smcrypt.pbe.password", PASSWORD);
+        properties.put("smcrypt.pbe.mode", "JCE");
+        properties.put("smcrypt.pbe.transformation", "PBEWITHHMACSHA512ANDAES_256");
+        properties.put("smcrypt.pbe.salt-size", "8");
+        properties.put("smcrypt.pbe.iv-size", "16");
+        PbeCipherHandler handler = new PbeCipherHandler();
+        handler.setContext(TestContexts.context(properties));
+        assertEquals("jce-sizes", handler.getDecryptText(handler.getEncryptText("jce-sizes")));
     }
 
     private void assertKdfRoundTrip(String transformation, String kdf) throws Exception {

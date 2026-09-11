@@ -3,9 +3,13 @@ package com.houkunlin.smcrypt;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.OriginTrackedMapPropertySource;
+import org.springframework.boot.origin.Origin;
 import org.springframework.boot.origin.OriginTrackedValue;
+import org.springframework.boot.origin.TextResourceOrigin;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.ClassPathResource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +53,46 @@ class SmCryptDecryptorTest {
         environment.getPropertySources().addFirst(new MapPropertySource("testSource", source));
         assertDoesNotThrow(() -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
         assertEquals(source.get("demo.value"), environment.getProperty("demo.value"));
+    }
+
+    @Test
+    void preservesOriginWhenDecryptingOriginTrackedSource() throws Exception {
+        Map<String, Object> encrypted = encryptedSource();
+        TextResourceOrigin origin = new TextResourceOrigin(new ClassPathResource("application.yml"), null);
+        encrypted.put("demo.value", OriginTrackedValue.of(encrypted.get("demo.value"), origin));
+
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new OriginTrackedMapPropertySource("testOrigin", encrypted));
+        new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication());
+
+        PropertySource<?> replaced = environment.getPropertySources().get("testOrigin");
+        assertNotNull(replaced);
+        assertTrue(replaced instanceof OriginTrackedMapPropertySource);
+        Origin resultOrigin = ((OriginTrackedMapPropertySource) replaced).getOrigin("demo.value");
+        assertSame(origin, resultOrigin);
+    }
+
+    @Test
+    void ignoresNonMapPropertySource() {
+        StandardEnvironment environment = new StandardEnvironment();
+        CustomPropertySource custom = new CustomPropertySource("custom", "SM4ENC(base64,xxxxxxxx)");
+        environment.getPropertySources().addFirst(custom);
+        assertDoesNotThrow(() -> new SmCryptDecryptor().postProcessEnvironment(environment, new SpringApplication()));
+        assertSame(custom, environment.getPropertySources().get("custom"));
+    }
+
+    /**
+     * 非 {@link MapPropertySource} 的自定义属性源，用于验证解密引擎会跳过非 Map 类型来源。
+     */
+    private static final class CustomPropertySource extends PropertySource<String> {
+        private CustomPropertySource(String name, String value) {
+            super(name, value);
+        }
+
+        @Override
+        public Object getProperty(String name) {
+            return null;
+        }
     }
 
     private Map<String, Object> encryptedSource() throws Exception {

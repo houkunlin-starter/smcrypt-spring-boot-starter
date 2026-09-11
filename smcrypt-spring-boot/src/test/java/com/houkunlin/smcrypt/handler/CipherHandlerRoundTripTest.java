@@ -2,6 +2,7 @@ package com.houkunlin.smcrypt.handler;
 
 import com.houkunlin.smcrypt.BouncyCastleSupport;
 import com.houkunlin.smcrypt.TestContexts;
+import com.houkunlin.smcrypt.spi.CipherHandlerLoader;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 import org.bouncycastle.crypto.generators.SM9EncMasterKeyPairGenerator;
@@ -9,15 +10,17 @@ import org.bouncycastle.crypto.params.SM9EncMasterPrivateKeyParameters;
 import org.bouncycastle.crypto.params.SM9EncMasterPublicKeyParameters;
 import org.bouncycastle.crypto.params.SM9EncPrivateKeyParameters;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.security.spec.ECGenParameterSpec;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -141,6 +144,53 @@ class CipherHandlerRoundTripTest {
         handler.setContext(TestContexts.context(properties));
         String cipher = handler.getEncryptText("tamper-data");
         assertThrows(SecurityException.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
+    }
+
+    @ParameterizedTest(name = "{0} 篡改密文应被 MAC 检测")
+    @MethodSource("symmetricMacCases")
+    void macDetectsTamperedCipherTextForAllSymmetricAlgorithms(String algorithm, Map<String, String> properties) throws Exception {
+        DecryptHandler handler = findHandler(algorithm, properties);
+        String cipher = handler.getEncryptText("tamper-data");
+        assertThrows(Exception.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
+    }
+
+    /**
+     * 构造「对称算法 + 启用 MAC」的测试参数
+     */
+    private static Stream<Arguments> symmetricMacCases() {
+        return Stream.of(
+                macCase("SM4", SM4_KEY, null),
+                macCase("AES", AES_KEY, null),
+                macCase("DES", DES_KEY, null),
+                macCase("DESEDE", DESEDE_KEY_24, null),
+                macCase("CHACHA20", KEY_256, CHACHA20_IV),
+                macCase("GOST3412", KEY_256, null),
+                macCase("DSTU7624", KEY_256, null),
+                macCase("RC6", KEY_256, null),
+                macCase("CAMELLIA", KEY_256, null),
+                macCase("ARIA", KEY_256, null),
+                macCase("SEED", AES_KEY, null));
+    }
+
+    private static Arguments macCase(String algorithm, String key, String iv) {
+        String prefix = "smcrypt." + algorithm.toLowerCase(Locale.ROOT) + ".";
+        Map<String, String> properties = new HashMap<>();
+        properties.put(prefix + "key", key);
+        properties.put(prefix + "mac", "HmacSHA256");
+        if (iv != null) {
+            properties.put(prefix + "iv", iv);
+        }
+        return Arguments.of(algorithm, properties);
+    }
+
+    private static DecryptHandler findHandler(String algorithm, Map<String, String> properties) {
+        List<DecryptHandler> handlers = new CipherHandlerLoader().load(TestContexts.context(properties));
+        for (DecryptHandler handler : handlers) {
+            if (algorithm.equalsIgnoreCase(handler.algorithm())) {
+                return handler;
+            }
+        }
+        throw new IllegalStateException("未找到算法处理器：" + algorithm);
     }
 
     @Test
