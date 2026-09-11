@@ -88,13 +88,14 @@ public class CipherConfig {
     /**
      * 根据属性解析算法配置
      *
-     * @param algorithm             算法名称，如 {@code SM4}
+     * @param algorithm             算法名称（用于属性键前缀），如 {@code SM4}
+     * @param jceAlgorithm          JCE 变换串基础算法名（用于按 mode/padding 拼接），如 {@code GOST3412-2015}
      * @param properties            属性查询接口
      * @param defaultTransformation 未配置 {@code transformation}/{@code mode} 时使用的默认变换串
      * @param defaultEncoding       未配置 {@code encoding} 时加密输出使用的默认编码
      * @return 解析后的算法配置
      */
-    public static CipherConfig resolve(String algorithm, PropertyLookup properties,
+    public static CipherConfig resolve(String algorithm, String jceAlgorithm, PropertyLookup properties,
                                        String defaultTransformation, CipherEncoding defaultEncoding) {
         String prefix = "smcrypt." + algorithm.toLowerCase() + ".";
         String transformationValue = get(properties, prefix + "transformation");
@@ -110,7 +111,7 @@ public class CipherConfig {
 
         if (transformationValue == null && modeValue != null) {
             String actualPadding = paddingValue != null ? paddingValue : "PKCS5Padding";
-            transformationValue = algorithm.toUpperCase() + TRANSFORMATION_SEPARATOR + modeValue
+            transformationValue = jceAlgorithm.toUpperCase() + TRANSFORMATION_SEPARATOR + modeValue
                     + TRANSFORMATION_SEPARATOR + actualPadding;
         }
         if (transformationValue == null) {

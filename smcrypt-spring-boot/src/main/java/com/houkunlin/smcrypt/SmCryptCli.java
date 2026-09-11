@@ -226,7 +226,7 @@ public class SmCryptCli {
     private static void printUsage() {
         System.out.println("用法：SmCryptCli --algorithm <算法> --text <内容> [选项]");
         System.out.println("      SmCryptCli --generate-key --algorithm <算法> [--key-length <位>] [选项]");
-        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / SM9 / AES / DES / DESEDE / RSA / ECC");
+        System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / RSA / ECC");
         System.out.println("  --text, -t        待加密明文；配合 --decrypt 时表示待解密密文");
         System.out.println("  --key, -k         密钥内容（hex / Base64 / PEM）");
         System.out.println("  --file, -f        密钥文件路径（file: 或 classpath:）");
@@ -237,7 +237,7 @@ public class SmCryptCli {
         System.out.println("  --iv              初始向量（hex / Base64）");
         System.out.println("  --decrypt         解密模式");
         System.out.println("  --generate-key    生成密钥（配合 --algorithm；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）");
-        System.out.println("  --key-length      密钥长度（位）：AES 128/192/256、DES 56/64、DESEDE 112/168、RSA 2048/3072、ECC 256/384/521");
+        System.out.println("  --key-length      密钥长度（位）：AES/RC6 128/192/256、DES 56/64、DESEDE 112/168、CHACHA20/GOST3412 256、DSTU7624 128/256/512、RSA 2048/3072、ECC 256/384/521");
         System.out.println("  --identity        SM9 生成密钥时的身份（配合 --generate-key --algorithm SM9）");
         System.out.println("  --help, -h        显示帮助");
     }

@@ -27,6 +27,8 @@ class CipherHandlerRoundTripTest {
     private static final String DES_KEY = "0123456789abcdef";
     private static final String DESEDE_KEY_16 = "0123456789abcdeffedcba9876543210";
     private static final String DESEDE_KEY_24 = "0123456789abcdeffedcba98765432100123456789abcdef";
+    private static final String KEY_256 = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+    private static final String CHACHA20_IV = "00112233445566778899aabb";
 
     @Test
     void sm4RoundTripWithDefaultBase64() throws Exception {
@@ -162,6 +164,50 @@ class CipherHandlerRoundTripTest {
         handler.setContext(TestContexts.context(singleton("smcrypt.sm2.key", privateKey(keyPair))));
         String cipher = handler.getEncryptText("sm2-data");
         assertEquals("sm2-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void chacha20RoundTrip() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.chacha20.key", KEY_256);
+        properties.put("smcrypt.chacha20.iv", CHACHA20_IV);
+        ChaCha20Handler handler = new ChaCha20Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("chacha20-data");
+        assertEquals("chacha20-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void chacha20DetectsTamperedCipherText() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.chacha20.key", KEY_256);
+        properties.put("smcrypt.chacha20.iv", CHACHA20_IV);
+        ChaCha20Handler handler = new ChaCha20Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("chacha20-tamper");
+        assertThrows(Exception.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
+    }
+
+    @Test
+    void gost3412RoundTrip() throws Exception {
+        Gost3412Handler handler = new Gost3412Handler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.gost3412.key", KEY_256)));
+        String cipher = handler.getEncryptText("gost-data");
+        assertEquals("gost-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void dstu7624RoundTrip() throws Exception {
+        Dstu7624Handler handler = new Dstu7624Handler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.dstu7624.key", KEY_256)));
+        String cipher = handler.getEncryptText("dstu-data");
+        assertEquals("dstu-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void rc6RoundTrip() throws Exception {
+        Rc6Handler handler = new Rc6Handler();
+        handler.setContext(TestContexts.context(singleton("smcrypt.rc6.key", KEY_256)));
+        String cipher = handler.getEncryptText("rc6-data");
+        assertEquals("rc6-data", handler.getDecryptText(cipher));
     }
 
     @Test

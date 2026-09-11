@@ -40,6 +40,10 @@ public final class SmCryptKeyGenerator {
     private static final String AES = "AES";
     private static final String DES = "DES";
     private static final String DESEDE = "DESEDE";
+    private static final String CHACHA20 = "CHACHA20";
+    private static final String GOST3412 = "GOST3412";
+    private static final String DSTU7624 = "DSTU7624";
+    private static final String RC6 = "RC6";
     private static final String RSA = "RSA";
     private static final String SM2 = "SM2";
     private static final String ECC = "ECC";
@@ -58,7 +62,8 @@ public final class SmCryptKeyGenerator {
      */
     public static boolean isSymmetric(String algorithm) {
         String upper = algorithm.toUpperCase();
-        return SM4.equals(upper) || AES.equals(upper) || DES.equals(upper) || DESEDE.equals(upper);
+        return SM4.equals(upper) || AES.equals(upper) || DES.equals(upper) || DESEDE.equals(upper)
+                || CHACHA20.equals(upper) || GOST3412.equals(upper) || DSTU7624.equals(upper) || RC6.equals(upper);
     }
 
     /**
@@ -78,7 +83,7 @@ public final class SmCryptKeyGenerator {
             SecretKey key = keyGenerator.generateKey();
             return Hex.toHexString(key.getEncoded());
         } catch (Exception e) {
-            throw new IllegalArgumentException("生成 " + algorithm + " 密钥失败：" + e.getMessage(), e);
+            throw new IllegalArgumentException("对称密钥生成失败（" + algorithm + "）：" + e.getMessage(), e);
         }
     }
 
@@ -106,7 +111,7 @@ public final class SmCryptKeyGenerator {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalArgumentException("生成 " + algorithm + " 密钥对失败：" + e.getMessage(), e);
+            throw new IllegalArgumentException("密钥对生成失败（" + algorithm + "）：" + e.getMessage(), e);
         }
     }
 
@@ -216,13 +221,48 @@ public final class SmCryptKeyGenerator {
                     return 168;
                 }
                 throw new IllegalArgumentException("DESEDE 密钥长度仅支持 112 / 128（2-key）或 168 / 192（3-key）位");
+            case CHACHA20:
+                if (requestedBits <= 0 || requestedBits == 256) {
+                    return 256;
+                }
+                throw new IllegalArgumentException("ChaCha20 密钥长度仅支持 256 位");
+            case GOST3412:
+                if (requestedBits <= 0 || requestedBits == 256) {
+                    return 256;
+                }
+                throw new IllegalArgumentException("GOST3412 密钥长度仅支持 256 位");
+            case DSTU7624:
+                if (requestedBits <= 0) {
+                    return 256;
+                }
+                if (requestedBits != 128 && requestedBits != 256 && requestedBits != 512) {
+                    throw new IllegalArgumentException("DSTU7624 密钥长度仅支持 128 / 256 / 512 位");
+                }
+                return requestedBits;
+            case RC6:
+                if (requestedBits <= 0) {
+                    return 256;
+                }
+                if (requestedBits != 128 && requestedBits != 192 && requestedBits != 256) {
+                    throw new IllegalArgumentException("RC6 密钥长度仅支持 128 / 192 / 256 位");
+                }
+                return requestedBits;
             default:
                 throw new IllegalArgumentException("不支持的对称算法：" + algorithm);
         }
     }
 
     private static String symmetricJceAlgorithm(String algorithm) {
-        return DESEDE.equals(algorithm) ? "DESede" : algorithm;
+        if (DESEDE.equals(algorithm)) {
+            return "DESede";
+        }
+        if (CHACHA20.equals(algorithm)) {
+            return "ChaCha20";
+        }
+        if (GOST3412.equals(algorithm)) {
+            return "GOST3412-2015";
+        }
+        return algorithm;
     }
 
     private static String jceKeyPairAlgorithm(String algorithm) {

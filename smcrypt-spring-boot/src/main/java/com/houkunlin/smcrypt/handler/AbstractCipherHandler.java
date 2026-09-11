@@ -119,12 +119,25 @@ public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHa
     }
 
     /**
+     * JCE 变换串使用的基础算法名
+     *
+     * <p>默认与 {@link #algorithm()} 相同；当密文前缀与 JCE 变换基础名不一致时（例如 GOST3412 的前缀
+     * 为 {@code GOST3412}、而 JCE 名为 {@code GOST3412-2015}），由子类覆写。用于按 {@code mode} /
+     * {@code padding} 拼接变换串。</p>
+     *
+     * @return JCE 变换基础算法名
+     */
+    protected String jceAlgorithm() {
+        return algorithm();
+    }
+
+    /**
      * 解析当前算法的配置
      *
      * @return 算法配置
      */
     protected CipherConfig resolveConfig() {
-        return context().resolveConfig(algorithm(), defaultTransformation(), defaultEncoding());
+        return context().resolveConfig(algorithm(), jceAlgorithm(), defaultTransformation(), defaultEncoding());
     }
 
     /**

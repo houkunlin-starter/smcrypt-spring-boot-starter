@@ -19,7 +19,8 @@ class CipherHandlerLoaderTest {
     void loadsBuiltinAndSpiHandlers() {
         List<DecryptHandler> handlers = load();
         Set<String> algorithms = handlers.stream().map(DecryptHandler::algorithm).collect(Collectors.toSet());
-        assertTrue(algorithms.containsAll(Arrays.asList("SM4", "SM2", "SM9", "AES", "DES", "DESEDE", "RSA", "ECC")));
+        assertTrue(algorithms.containsAll(Arrays.asList("SM4", "SM2", "SM9", "AES", "DES", "DESEDE",
+                "CHACHA20", "GOST3412", "DSTU7624", "RC6", "RSA", "ECC")));
         assertTrue(algorithms.contains("DEMO"), "应加载 META-INF/services 注册的处理器");
         assertTrue(algorithms.contains("FACTORY"), "应加载 spring.factories 注册的处理器");
     }

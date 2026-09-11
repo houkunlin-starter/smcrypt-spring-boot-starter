@@ -45,14 +45,16 @@
 
 - **零侵入**：业务代码照常使用 `@Value`、`Environment`、`@ConfigurationProperties`，无需感知密文；
 - **多版本兼容**：同一套核心逻辑，分别适配 Spring Boot 2 / 3 / 4；
-- **多算法**：内置国密 SM2 / SM4 / SM9 (标识加密) 及 AES / DES / DESEDE (3DES) / RSA / ECC；
+- **多算法**：内置国密 SM2 / SM4 / SM9 (标识加密) 及 AES / DES / DESEDE (3DES) / ChaCha20-Poly1305 / GOST3412-2015 /
+  DSTU7624 / RC6 / RSA / ECC；
 - **多编码**：支持 hex、Base64，可显式声明或自动识别；
 - **可扩展**：业务系统可通过 SPI 接入自定义算法，或对接加密机（HSM）等外部解密能力。
 
 ## 二、核心特性
 
 - 同时支持 Spring Boot 2 / 3 / 4，按版本选用对应 Starter；
-- 内置算法：SM4、SM2、SM9（标识加密）、AES、DES、DESEDE (3DES)、RSA、ECC（ECIES），基于 BouncyCastle；
+- 内置算法：SM4、SM2、SM9（标识加密）、AES、DES、DESEDE (3DES)、ChaCha20-Poly1305、GOST3412-2015、DSTU7624、RC6、RSA、ECC（ECIES），基于
+  BouncyCastle；
 - 密文编码支持 hex 与 Base64，可显式声明（`SM4ENC(hex,...)`）或自动识别；
 - 支持 properties、yml/yaml、命令行参数、环境变量等所有 Spring Boot 配置来源；
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
@@ -228,29 +230,37 @@ public class DemoService {
 
 ### 算法前缀
 
-| 算法   | 前缀             |
-|--------|------------------|
-| SM4    | `SM4ENC(...)`    |
-| SM2    | `SM2ENC(...)`    |
-| AES    | `AESENC(...)`    |
-| DES    | `DESENC(...)`    |
-| DESEDE | `DESEDEENC(...)` |
-| RSA    | `RSAENC(...)`    |
-| ECC    | `ECCENC(...)`    |
+| 算法     | 前缀               |
+|----------|--------------------|
+| SM4      | `SM4ENC(...)`      |
+| SM2      | `SM2ENC(...)`      |
+| AES      | `AESENC(...)`      |
+| DES      | `DESENC(...)`      |
+| DESEDE   | `DESEDEENC(...)`   |
+| CHACHA20 | `CHACHA20ENC(...)` |
+| GOST3412 | `GOST3412ENC(...)` |
+| DSTU7624 | `DSTU7624ENC(...)` |
+| RC6      | `RC6ENC(...)`      |
+| RSA      | `RSAENC(...)`      |
+| ECC      | `ECCENC(...)`      |
 
 > SM9 为标识加密（IBC），前缀为 `SM9ENC(...)`，其配置方式与其它算法不同，单独说明见「十一、SM9 标识加密」。
 
 ## 八、支持的算法
 
-| 算法   | 前缀        | 默认变换                  | 密钥要求             | 说明                             |
-|--------|-------------|---------------------------|----------------------|----------------------------------|
-| SM4    | `SM4ENC`    | `SM4/ECB/PKCS5Padding`    | 16 字节对称密钥      | 国密分组密码                     |
-| SM2    | `SM2ENC`    | `SM2`（C1C3C2）           | EC 私钥（sm2p256v1） | 国密非对称，默认 C1C3C2 顺序     |
-| AES    | `AESENC`    | `AES/ECB/PKCS5Padding`    | 16 / 24 / 32 字节    | 国际通用对称加密                 |
-| DES    | `DESENC`    | `DES/ECB/PKCS5Padding`    | 8 字节               | 兼容遗留系统                     |
-| DESEDE | `DESEDEENC` | `DESede/ECB/PKCS5Padding` | 16 / 24 字节         | 3DES（Triple DES），兼容遗留系统 |
-| RSA    | `RSAENC`    | `RSA/ECB/PKCS1Padding`    | RSA 私钥             | 非对称加密                       |
-| ECC    | `ECCENC`    | `ECIES`                   | EC 私钥              | 基于 ECIES 的椭圆曲线加密        |
+| 算法     | 前缀          | 默认变换                         | 密钥要求             | 说明                              |
+|----------|---------------|----------------------------------|----------------------|-----------------------------------|
+| SM4      | `SM4ENC`      | `SM4/ECB/PKCS5Padding`           | 16 字节对称密钥      | 国密分组密码                      |
+| SM2      | `SM2ENC`      | `SM2`（C1C3C2）                  | EC 私钥（sm2p256v1） | 国密非对称，默认 C1C3C2 顺序      |
+| AES      | `AESENC`      | `AES/ECB/PKCS5Padding`           | 16 / 24 / 32 字节    | 国际通用对称加密                  |
+| DES      | `DESENC`      | `DES/ECB/PKCS5Padding`           | 8 字节               | 兼容遗留系统                      |
+| DESEDE   | `DESEDEENC`   | `DESede/ECB/PKCS5Padding`        | 16 / 24 字节         | 3DES（Triple DES），兼容遗留系统  |
+| CHACHA20 | `CHACHA20ENC` | `ChaCha20-Poly1305`              | 32 字节              | AEAD（自带完整性），nonce 12 字节 |
+| GOST3412 | `GOST3412ENC` | `GOST3412-2015/ECB/PKCS5Padding` | 32 字节              | 俄罗斯标准（Kuznyechik）          |
+| DSTU7624 | `DSTU7624ENC` | `DSTU7624/ECB/PKCS5Padding`      | 16 / 32 / 64 字节    | 乌克兰标准（Kalyna）              |
+| RC6      | `RC6ENC`      | `RC6/ECB/PKCS5Padding`           | 16 / 24 / 32 字节    | AES 候选算法，使用较少            |
+| RSA      | `RSAENC`      | `RSA/ECB/PKCS1Padding`           | RSA 私钥             | 非对称加密                        |
+| ECC      | `ECCENC`      | `ECIES`                          | EC 私钥              | 基于 ECIES 的椭圆曲线加密         |
 
 说明：
 
@@ -267,16 +277,20 @@ public class DemoService {
 
 各算法的安全状态与选型建议如下（新系统请优先选择「推荐」的算法）：
 
-| 算法           | 密钥 / 安全强度             | 安全状态      | 选型建议                                                  |
-|----------------|-----------------------------|---------------|-----------------------------------------------------------|
-| AES            | 128 / 192 / 256 位          | 安全          | **推荐**；优先 GCM，避免 ECB                              |
-| SM4            | 128 位                      | 安全          | **推荐**（国密合规）；优先 CBC/GCM，避免 ECB              |
-| SM2            | 256 位曲线（约 128 位）     | 安全          | **推荐**（国密合规）；算法内部使用 SM3 摘要，无需单独配置 |
-| RSA            | 依密钥长度                  | 2048 位起安全 | 可用；推荐 3072 位 + OAEP                                 |
-| ECC（ECIES）   | 256 位曲线（约 128 位）     | 安全          | 可用；曲线不低于 256 位                                   |
-| SM9            | 256 位 BN 曲线（约 128 位） | 安全          | 仅标识密码（IBC）场景；依赖 KGC                           |
-| 3DES（DESEDE） | 112 / 168 位                | **已过时**    | 仅兼容遗留系统；NIST 自 2024 年起禁用其加密               |
-| DES            | 56 位                       | **已破解**    | 禁止用于新系统，仅兼容                                    |
+| 算法              | 密钥 / 安全强度             | 安全状态      | 选型建议                                                  |
+|-------------------|-----------------------------|---------------|-----------------------------------------------------------|
+| AES               | 128 / 192 / 256 位          | 安全          | **推荐**；优先 GCM，避免 ECB                              |
+| SM4               | 128 位                      | 安全          | **推荐**（国密合规）；优先 CBC/GCM，避免 ECB              |
+| SM2               | 256 位曲线（约 128 位）     | 安全          | **推荐**（国密合规）；算法内部使用 SM3 摘要，无需单独配置 |
+| RSA               | 依密钥长度                  | 2048 位起安全 | 可用；推荐 3072 位 + OAEP                                 |
+| ECC（ECIES）      | 256 位曲线（约 128 位）     | 安全          | 可用；曲线不低于 256 位                                   |
+| SM9               | 256 位 BN 曲线（约 128 位） | 安全          | 仅标识密码（IBC）场景；依赖 KGC                           |
+| ChaCha20-Poly1305 | 256 位                      | 安全          | **推荐**（AEAD，自带完整性）                              |
+| GOST3412-2015     | 256 位                      | 安全          | 俄罗斯地区标准（Kuznyechik）                              |
+| DSTU7624          | 128 / 256 / 512 位          | 安全          | 乌克兰地区标准（Kalyna）                                  |
+| RC6               | 128 / 192 / 256 位          | 安全          | 可用但使用较少                                            |
+| 3DES（DESEDE）    | 112 / 168 位                | **已过时**    | 仅兼容遗留系统；NIST 自 2024 年起禁用其加密               |
+| DES               | 56 位                       | **已破解**    | 禁止用于新系统，仅兼容                                    |
 
 **推荐优先级**
 
@@ -375,7 +389,7 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 ### 10.2 算法与参数支持矩阵
 
-| 配置项           | SM4 / AES / DES / DESEDE（对称） | RSA                                   | ECC（ECIES）           | SM2                    |
+| 配置项           | 对称算法                         | RSA                                   | ECC（ECIES）           | SM2                    |
 |------------------|----------------------------------|---------------------------------------|------------------------|------------------------|
 | `transformation` | 支持                             | 支持                                  | 支持（默认 `ECIES`）   | 不生效                 |
 | `mode`           | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置               | 仅 `C1C3C2` / `C1C2C3` |
@@ -386,8 +400,9 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 说明：
 
-- **SM4 / AES / DES / DESEDE**：`transformation` / `mode` / `padding` / `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
-  `iv`；
+- **对称算法**（SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6）：`transformation` / `mode` / `padding` /
+  `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
+  `iv`；ChaCha20-Poly1305 为 AEAD，不支持 `mode` / `padding`，需 12 字节 nonce；
 - **完整性校验（MAC）**：仅对称算法支持；配置 `smcrypt.<算法>.mac` 后启用 encrypt-then-MAC（密文载荷为 `密文 || MAC`），
   解密时先校验 MAC，防篡改；非对称算法（SM2 / SM9 / ECIES）已内置完整性校验，无需额外配置；
 - **RSA**：建议直接用 `transformation` 指定填充，如 `RSA/ECB/PKCS1Padding`、`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`；
@@ -395,7 +410,8 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 - **SM2**：`mode` 仅用于选择密文顺序（默认 `C1C3C2`），其余参数不生效；
 - `mode` / `padding` 仅在 **未配置** `transformation` 且 **设置了** `mode` 时才参与变换串拼接；只配置 `padding`
   不会改变默认变换串；
-- `iv` 长度必须与算法分组一致：AES / SM4 为 16 字节（32 位 hex），DES / DESEDE 为 8 字节（16 位 hex）；GCM 推荐 12 字节。
+- `iv` 长度必须与算法分组一致：AES / SM4 / GOST3412 / DSTU7624 / RC6 为 16 字节，DES / DESEDE 为 8 字节；GCM 与
+  ChaCha20-Poly1305 的 nonce 为 12 字节。
 
 ### 10.3 常用场景示例
 
@@ -521,7 +537,17 @@ smcrypt.aes.mac-key=aabbccddeeff00112233445566778899
 启用后加密输出为 `SM4ENC(base64,<密文||MAC>)`（encrypt-then-MAC），解密时会先校验 MAC，
 密文被篡改将抛出异常；`mac` / `mac-key` 仅对对称算法有效。
 
-> 以上配置项适用于 SM4 / AES / DES / DESEDE / RSA / ECC 等算法；SM9 的配置项单独见下一节。
+#### 场景 12：ChaCha20-Poly1305（AEAD）
+
+```properties
+# 32 字节密钥；AEAD 需 12 字节 nonce（每次加密随机且不复用）
+smcrypt.chacha20.key=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+smcrypt.chacha20.iv=00112233445566778899aabb
+```
+
+ChaCha20-Poly1305 自带认证标签，无需再配置 `mac`；不支持 `mode` / `padding`。
+
+> 以上配置项适用于 SM4 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 / RC6 / RSA / ECC 等算法；SM9 的配置项单独见下一节。
 
 ## 十一、SM9 标识加密
 
@@ -768,15 +794,19 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli --generate-key --algorithm SM9
 
 `--key-length` 支持的密钥长度（单位：位；未指定时使用默认值）：
 
-| 算法   | 可用长度                               | 默认 |
-|--------|----------------------------------------|------|
-| SM4    | 128                                    | 128  |
-| AES    | 128 / 192 / 256                        | 256  |
-| DES    | 56 / 64                                | 56   |
-| DESEDE | 112 / 128（2-key）、168 / 192（3-key） | 168  |
-| RSA    | 2048 / 3072 / 4096 等                  | 2048 |
-| ECC    | 256 / 384 / 521                        | 256  |
-| SM2    | 256（固定）                            | 256  |
+| 算法     | 可用长度                               | 默认 |
+|----------|----------------------------------------|------|
+| SM4      | 128                                    | 128  |
+| AES      | 128 / 192 / 256                        | 256  |
+| DES      | 56 / 64                                | 56   |
+| DESEDE   | 112 / 128（2-key）、168 / 192（3-key） | 168  |
+| CHACHA20 | 256（固定）                            | 256  |
+| GOST3412 | 256（固定）                            | 256  |
+| DSTU7624 | 128 / 256 / 512                        | 256  |
+| RC6      | 128 / 192 / 256                        | 256  |
+| RSA      | 2048 / 3072 / 4096 等                  | 2048 |
+| ECC      | 256 / 384 / 521                        | 256  |
+| SM2      | 256（固定）                            | 256  |
 
 > 本工具只负责 **生成密钥**；密钥长度由算法与 `--key-length` 决定，与「加密生成密文」是两个独立步骤。
 > 使用对称密钥加密时，AES/DES 的密钥长度即由所提供密钥的字节数决定（见「8.1 使用注意」）。
@@ -790,22 +820,22 @@ java -cp app.jar com.houkunlin.smcrypt.SmCryptCli \
 
 参数说明：
 
-| 参数               | 简写 | 说明                                                                       |
-|--------------------|------|----------------------------------------------------------------------------|
-| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `RSA` / `ECC` |
-| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                              |
-| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                             |
-| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                     |
-| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                            |
-| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                  |
-| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                        |
-| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                              |
-| `--iv`             |      | 初始向量（hex / Base64）                                                   |
-| `--decrypt`        |      | 解密模式                                                                   |
-| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）     |
-| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                       |
-| `--identity`       |      | SM9 生成密钥时的身份                                                       |
-| `--help`           | `-h` | 显示帮助                                                                   |
+| 参数               | 简写 | 说明                                                                                                                      |
+|--------------------|------|---------------------------------------------------------------------------------------------------------------------------|
+| `--algorithm`      | `-a` | 算法名称：`SM4` / `SM2` / `SM9` / `AES` / `DES` / `DESEDE` / `CHACHA20` / `GOST3412` / `DSTU7624` / `RC6` / `RSA` / `ECC` |
+| `--text`           | `-t` | 待加密明文；配合 `--decrypt` 时表示待解密密文                                                                             |
+| `--key`            | `-k` | 密钥内容（hex / Base64 / PEM）                                                                                            |
+| `--file`           | `-f` | 密钥文件路径（`file:` / `classpath:`）                                                                                    |
+| `--encoding`       | `-e` | 加密输出编码：`hex` / `base64`（默认 `base64`）                                                                           |
+| `--transformation` |      | 自定义 JCE 变换串，如 `AES/GCM/NoPadding`                                                                                 |
+| `--mode`           |      | 加密模式，如 `CBC`、`GCM`、`C1C3C2`                                                                                       |
+| `--padding`        |      | 填充方式，默认 `PKCS5Padding`                                                                                             |
+| `--iv`             |      | 初始向量（hex / Base64）                                                                                                  |
+| `--decrypt`        |      | 解密模式                                                                                                                  |
+| `--generate-key`   |      | 生成密钥（配合 `--algorithm`；对称输出 hex，RSA/ECC/SM2 输出私钥 PEM）                                                    |
+| `--key-length`     |      | 生成密钥的长度（位），见「生成密钥」                                                                                      |
+| `--identity`       |      | SM9 生成密钥时的身份                                                                                                      |
+| `--help`           | `-h` | 显示帮助                                                                                                                  |
 
 解密示例：
 
@@ -863,8 +893,9 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 测试覆盖：
 
-- 核心单元测试：编解码自动识别、各算法加解密往返（SM4 / SM2 / SM9 / AES / DES / DESEDE / RSA / ECC）、
-  完整性校验（对称算法 MAC 与非对称算法内置校验的篡改检测）、密钥解析、SPI 加载（`META-INF/services` 与
+- 核心单元测试：编解码自动识别、各算法加解密往返（SM4 / SM2 / SM9 / AES / DES / DESEDE / CHACHA20 / GOST3412 / DSTU7624 /
+  RC6 / RSA / ECC）、
+  完整性校验（对称算法 MAC 与非对称算法内置校验的篡改检测）、密钥生成与长度校验、密钥解析、SPI 加载（`META-INF/services` 与
   `spring.factories` 两条路径）、解密引擎对 PropertySource 的替换与来源保留；
 - 各 starter 集成测试：真实启动 `SpringApplication`，验证配置中的密文被解成明文。
 

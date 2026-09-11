@@ -70,12 +70,13 @@ public class SmCryptContext {
     /**
      * 解析指定算法的配置
      *
-     * @param algorithm             算法名称
+     * @param algorithm             算法名称（用于属性键前缀）
+     * @param jceAlgorithm          JCE 变换串基础算法名（用于按 mode/padding 拼接变换串）
      * @param defaultTransformation 默认变换串
      * @param defaultEncoding       默认加密输出编码
      * @return 算法配置
      */
-    public CipherConfig resolveConfig(String algorithm, String defaultTransformation, CipherEncoding defaultEncoding) {
-        return CipherConfig.resolve(algorithm, properties, defaultTransformation, defaultEncoding);
+    public CipherConfig resolveConfig(String algorithm, String jceAlgorithm, String defaultTransformation, CipherEncoding defaultEncoding) {
+        return CipherConfig.resolve(algorithm, jceAlgorithm, properties, defaultTransformation, defaultEncoding);
     }
 }

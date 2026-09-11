@@ -34,6 +34,33 @@ class SmCryptKeyGeneratorTest {
     }
 
     @Test
+    void generateNewSymmetricKeyLengths() {
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("CHACHA20", 256).length());
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("GOST3412", 256).length());
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("DSTU7624", 256).length());
+        assertEquals(64, SmCryptKeyGenerator.generateSymmetricKey("RC6", 256).length());
+    }
+
+    @Test
+    void generatedNewSymmetricKeysRoundTrip() throws Exception {
+        assertSymmetricRoundTrip(new Gost3412Handler(), "GOST3412", 256);
+        assertSymmetricRoundTrip(new Dstu7624Handler(), "DSTU7624", 256);
+        assertSymmetricRoundTrip(new Rc6Handler(), "RC6", 256);
+    }
+
+    @Test
+    void generatedChaCha20KeyRoundTrip() throws Exception {
+        String key = SmCryptKeyGenerator.generateSymmetricKey("CHACHA20", 256);
+        Map<String, String> properties = new HashMap<>();
+        properties.put("smcrypt.chacha20.key", key);
+        properties.put("smcrypt.chacha20.iv", "00112233445566778899aabb");
+        ChaCha20Handler handler = new ChaCha20Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("chacha20-data");
+        assertEquals("chacha20-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
     void generatedRsaKeyPairRoundTrip() throws Exception {
         KeyPair keyPair = SmCryptKeyGenerator.generateKeyPair("RSA", 2048);
         RsaHandler handler = new RsaHandler();
