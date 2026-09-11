@@ -25,11 +25,13 @@
 - 密文编码支持 hex 与 Base64，可显式声明（`SM4ENC(hex,...)`）或自动识别；
 - 支持 properties、yml/yaml、命令行参数、环境变量等所有 Spring Boot 配置来源；
 - 解密时保留配置来源（Origin）信息，YAML 行号、错误溯源不受影响；
-- 解密失败仅记录日志并跳过该属性，不会导致整个应用启动崩溃；
+- 解密失败默认仅记录日志并跳过该属性，可通过 `smcrypt.fail-fast=true` 改为中断启动；
 - 保留 SPI 扩展接口，业务方可接入自定义算法或加密机，并覆盖内置实现；
 - 支持口令派生（PBE：PBKDF2 / scrypt / Argon2，或 JCE PBE 变换）与 Jasypt 密文兼容（`PBEENC` / `JASYPTENC`）；
 - 提供密钥生成、加密 API 与命令行工具，便于生成密钥与配置密文；
 - 启动早期使用独立日志上下文，不会干扰 Spring Boot 全局日志系统。
+
+> 生产环境部署前，请先阅读 [生产环境加固建议](docs/security.md)。
 
 ## 快速开始
 

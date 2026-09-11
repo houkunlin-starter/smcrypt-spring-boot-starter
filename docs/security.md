@@ -55,6 +55,24 @@
 
 > 合规提示：需满足国密合规时优先使用 `SM2` / `SM4` / `SM9`；面向国际或通用生态时使用 `AES` / `RSA` / `ECC`。
 
+## 生产环境加固清单
+
+部署前建议逐项检查：
+
+- **启用 fail-fast**：设置 `smcrypt.fail-fast=true`，让密钥缺失或解密失败在启动阶段直接暴露，而不是带着未解密的密文继续启动；
+- **选择安全算法与模式**：对称优先 `AES-256-GCM` / `SM4-GCM`；非对称优先 `RSA-3072 + OAEP` / `SM2`；避免 ECB、DES / 3DES、RSA
+  PKCS#1 v1.5；
+- **配置随机且不复用的 IV / nonce**：GCM 复用 IV 会导致密钥流泄露；
+- **启用完整性校验**：非 AEAD 模式配置 `smcrypt.<算法>.mac=HmacSM3|HmacSHA256` 启用 encrypt-then-MAC，并单独配置
+  `smcrypt.<算法>.mac-key`，避免与加密密钥复用；
+- **显式声明密钥编码**：密钥为含空白口令或全十六进制字符时，配置 `smcrypt.<算法>.key-encoding=plain|hex`，消除自动识别歧义；
+- **密钥来源安全**：密钥 / 口令通过环境变量、JVM 参数或密钥文件提供，避免硬编码；CLI 使用 `--key -` / `--password -`
+  从标准输入读取，避免进入命令历史；
+- **限制密钥文件权限**：确保 `smcrypt-<算法>.key` / `.properties` 仅对必要用户可读；
+- **定期轮换密钥**：密钥泄露后应尽快更换并重新加密密文。
+
+> 各配置项含义见 [配置项参考](configuration.md)。
+
 ## 口令派生（PBE）安全建议
 
 - 优先使用 `PBEENC` + `mode=KDF` + `AES/GCM/NoPadding` + `Argon2id`（或 PBKDF2 ≥ 600000 次）；
@@ -65,4 +83,5 @@
 ## 相关文档
 
 - [算法索引](algorithms/README.md)
+- [配置项参考](configuration.md)
 - [PBE](algorithms/pbe.md) / [Jasypt](algorithms/jasypt.md)
