@@ -19,14 +19,17 @@ smcrypt.jasypt.password=my-jasypt-password
 
 ## 配置项
 
-| 配置项                                  | 说明                    | 默认                          |
-|-----------------------------------------|-------------------------|-------------------------------|
-| `smcrypt.jasypt.password`               | Jasypt 口令             | 无                            |
-| `smcrypt.jasypt.transformation`         | Jasypt 算法             | `PBEWITHHMACSHA512ANDAES_256` |
-| `smcrypt.jasypt.iterations`             | 迭代次数                | `1000`                        |
-| `smcrypt.jasypt.salt-size` / `.iv-size` | 盐 / IV 长度（0=无 IV） | `16` / `16`                   |
-| `smcrypt.jasypt.provider`               | Provider 名             | JVM 默认（SunJCE）            |
-| `smcrypt.jasypt.encoding`               | 内层编码                | `base64`                      |
+| 配置项                                  | 阶段   | 说明                    | 默认                          |
+|-----------------------------------------|--------|-------------------------|-------------------------------|
+| `smcrypt.jasypt.password`               | 加解密 | Jasypt 口令             | 无                            |
+| `smcrypt.jasypt.transformation`         | 加解密 | Jasypt 算法             | `PBEWITHHMACSHA512ANDAES_256` |
+| `smcrypt.jasypt.iterations`             | 加解密 | 迭代次数                | `1000`                        |
+| `smcrypt.jasypt.salt-size` / `.iv-size` | 加密   | 盐 / IV 长度（0=无 IV） | `16` / `16`                   |
+| `smcrypt.jasypt.provider`               | 加解密 | Provider 名             | JVM 默认（SunJCE）            |
+| `smcrypt.jasypt.encoding`               | 加密   | 内层编码                | `base64`                      |
+
+> `阶段` 列说明：`加密` 表示仅在生成密文时使用；`加解密` 表示加密与解密两端都需保持一致。
+> 盐与 IV 在加密时随机生成并内嵌到载荷，解密时直接从载荷读取。
 
 ## 安全建议
 

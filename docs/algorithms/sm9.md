@@ -39,16 +39,18 @@ SM9 的密钥材料包含四项，均需提供：
 
 SM9 的配置项独立于其它算法，统一以 `smcrypt.sm9.` 为前缀：
 
-| 配置项                          | 说明                                 | 默认值   |
-|---------------------------------|--------------------------------------|----------|
-| `smcrypt.sm9.private-key`       | 用户私钥 `de`（hex / Base64）        | 无       |
-| `smcrypt.sm9.master-public-key` | 主公钥 `Ppub-e`（hex / Base64）      | 无       |
-| `smcrypt.sm9.identity`          | 身份字符串（UTF-8）                  | 无       |
-| `smcrypt.sm9.hid`               | 私钥生成函数标识（hex，KEM 用 `03`） | `03`     |
-| `smcrypt.sm9.mode`              | 数据封装方式：`SM4` / `STREAM`       | `SM4`    |
-| `smcrypt.sm9.cipher-format`     | 密文格式：`raw` / `asn1`             | `raw`    |
-| `smcrypt.sm9.encoding`          | 加密输出编码：`hex` / `base64`       | `base64` |
+| 配置项                          | 阶段   | 说明                                 | 默认值   |
+|---------------------------------|--------|--------------------------------------|----------|
+| `smcrypt.sm9.private-key`       | 解密   | 用户私钥 `de`（hex / Base64）        | 无       |
+| `smcrypt.sm9.master-public-key` | 加解密 | 主公钥 `Ppub-e`（hex / Base64）      | 无       |
+| `smcrypt.sm9.identity`          | 加解密 | 身份字符串（UTF-8）                  | 无       |
+| `smcrypt.sm9.hid`               | 加解密 | 私钥生成函数标识（hex，KEM 用 `03`） | `03`     |
+| `smcrypt.sm9.mode`              | 加解密 | 数据封装方式：`SM4` / `STREAM`       | `SM4`    |
+| `smcrypt.sm9.cipher-format`     | 加解密 | 密文格式：`raw` / `asn1`             | `raw`    |
+| `smcrypt.sm9.encoding`          | 加密   | 加密输出编码：`hex` / `base64`       | `base64` |
 
+> `阶段` 列说明：`加密` 表示仅在生成密文时使用；`解密` 表示仅在解密时使用；`加解密` 表示加密与解密两端都需保持一致。
+> 加密只需主公钥与身份，无需用户私钥；解密需要用户私钥，并借助主公钥与身份重建私钥。
 > SM9 不使用 `transformation` / `padding` / `iv` 等参数。
 
 ## 配置示例

@@ -8,18 +8,19 @@
 
 ## 配置项总览
 
-| 配置项                          | 说明                                                                      | 默认值             |
-|---------------------------------|---------------------------------------------------------------------------|--------------------|
-| `smcrypt.<算法>.key`            | 密钥内容（对称：hex / Base64 / 口令；非对称：PEM / Base64(DER)）          | 无                 |
-| `smcrypt.<算法>.file`           | 密钥文件（`file:` / `classpath:`，`.properties` 读 `key` / `secret_key`） | 无                 |
-| `smcrypt.<算法>.transformation` | 完整 JCE 变换串，优先级最高                                               | 见算法表           |
-| `smcrypt.<算法>.mode`           | 加密模式，与 `padding` 组合生成变换串                                     | 见算法表           |
-| `smcrypt.<算法>.padding`        | 填充方式                                                                  | `PKCS5Padding`     |
-| `smcrypt.<算法>.iv`             | 初始向量（hex / Base64，自动识别）                                        | 无                 |
-| `smcrypt.<算法>.encoding`       | 加密输出所用编码（`hex` / `base64`）                                      | `base64`           |
-| `smcrypt.<算法>.mac`            | 完整性校验算法（`HmacSM3` / `HmacSHA256`），仅对称算法有效                | 无（不启用）       |
-| `smcrypt.<算法>.mac-key`        | MAC 密钥（hex / Base64 / 口令），默认复用加密密钥                         | 无（复用加密密钥） |
+| 配置项                          | 阶段   | 说明                                                                      | 默认值             |
+|---------------------------------|--------|---------------------------------------------------------------------------|--------------------|
+| `smcrypt.<算法>.key`            | 加解密 | 密钥内容（对称：hex / Base64 / 口令；非对称：PEM / Base64(DER)）          | 无                 |
+| `smcrypt.<算法>.file`           | 加解密 | 密钥文件（`file:` / `classpath:`，`.properties` 读 `key` / `secret_key`） | 无                 |
+| `smcrypt.<算法>.transformation` | 加解密 | 完整 JCE 变换串，优先级最高                                               | 见算法表           |
+| `smcrypt.<算法>.mode`           | 加解密 | 加密模式，与 `padding` 组合生成变换串                                     | 见算法表           |
+| `smcrypt.<算法>.padding`        | 加解密 | 填充方式                                                                  | `PKCS5Padding`     |
+| `smcrypt.<算法>.iv`             | 加解密 | 初始向量（hex / Base64，自动识别）                                        | 无                 |
+| `smcrypt.<算法>.encoding`       | 加密   | 加密输出所用编码（`hex` / `base64`）                                      | `base64`           |
+| `smcrypt.<算法>.mac`            | 加解密 | 完整性校验算法（`HmacSM3` / `HmacSHA256`），仅对称算法有效                | 无（不启用）       |
+| `smcrypt.<算法>.mac-key`        | 加解密 | MAC 密钥（hex / Base64 / 口令），默认复用加密密钥                         | 无（复用加密密钥） |
 
+> `阶段` 列说明：`加密` 表示仅在生成密文时使用；`解密` 表示仅在解密时使用；`加解密` 表示加密与解密两端都需保持一致。
 > `transformation` 优先级最高：一旦配置，`mode` / `padding` 不再参与变换串拼接。
 > `encoding` 只影响 **加密输出**，解密时编码会自动识别，无需配置。
 > 配置 `mac` 后启用 encrypt-then-MAC：加密输出为 `密文 || MAC`，解密前先校验 MAC，校验失败会抛出异常；
