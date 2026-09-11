@@ -1,5 +1,6 @@
 package com.houkunlin.smcrypt.key;
 
+import com.houkunlin.smcrypt.SmCryptLog;
 import com.houkunlin.smcrypt.codec.CipherEncoding;
 import com.houkunlin.smcrypt.codec.EncodingDetector;
 
@@ -36,6 +37,7 @@ public final class KeyCodec {
         try {
             return encoding.codec().decode(value);
         } catch (RuntimeException e) {
+            SmCryptLog.debug("密钥内容无法按 {} 解码，将按 UTF-8 原始字节处理", encoding, e);
             return value.getBytes(StandardCharsets.UTF_8);
         }
     }

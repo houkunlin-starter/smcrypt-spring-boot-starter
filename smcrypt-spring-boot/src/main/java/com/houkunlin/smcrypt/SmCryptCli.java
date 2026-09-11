@@ -67,7 +67,7 @@ public class SmCryptCli {
                 System.out.println(encryptor.encrypt(algorithm, text));
             }
         } catch (Exception e) {
-            System.err.println("执行失败：" + e.getMessage());
+            SmCryptLog.error("执行失败", e);
             System.exit(1);
         }
     }

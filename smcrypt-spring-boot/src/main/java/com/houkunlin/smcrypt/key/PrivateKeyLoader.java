@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.key;
 
 import com.houkunlin.smcrypt.BouncyCastleSupport;
+import com.houkunlin.smcrypt.SmCryptLog;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
@@ -112,6 +113,7 @@ public final class PrivateKeyLoader {
         try {
             return Base64.getDecoder().decode(compact);
         } catch (IllegalArgumentException e) {
+            SmCryptLog.debug("私钥内容无法按 Base64 解码，将按 UTF-8 原始字节处理", e);
             return value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         }
     }

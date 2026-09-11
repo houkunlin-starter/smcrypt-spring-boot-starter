@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.spi;
 
 import com.houkunlin.smcrypt.SmCryptContext;
+import com.houkunlin.smcrypt.SmCryptLog;
 import com.houkunlin.smcrypt.handler.*;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 
@@ -62,8 +63,9 @@ public class CipherHandlerLoader {
             for (DecryptHandler handler : ServiceLoader.load(DecryptHandler.class, classLoader)) {
                 handlers.put(key(handler), handler);
             }
-        } catch (Throwable ignored) {
-            // 业务方未注册或注册内容异常时忽略，不影响内置处理器
+        } catch (Throwable e) {
+            // 业务方未注册或注册内容异常时跳过该来源，但记录异常，避免静默失败
+            SmCryptLog.warn("通过 META-INF/services 加载密文处理器失败，已跳过该来源，不影响内置处理器", e);
         }
     }
 
@@ -72,8 +74,9 @@ public class CipherHandlerLoader {
             for (DecryptHandler handler : SpringFactoriesLoader.loadFactories(DecryptHandler.class, classLoader)) {
                 handlers.put(key(handler), handler);
             }
-        } catch (Throwable ignored) {
-            // spring.factories 不存在或加载异常时忽略
+        } catch (Throwable e) {
+            // spring.factories 不存在或加载异常时跳过该来源，但记录异常，避免静默失败
+            SmCryptLog.warn("通过 spring.factories 加载密文处理器失败，已跳过该来源", e);
         }
     }
 

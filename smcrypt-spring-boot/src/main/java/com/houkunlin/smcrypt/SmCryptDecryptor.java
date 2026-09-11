@@ -46,6 +46,7 @@ public class SmCryptDecryptor {
      */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         SmCryptLogback logback = new SmCryptLogback(environment, application, getClass().getName());
+        SmCryptLog.setActive(logback);
         try {
             logback.logMessage(LogLevel.INFO, "[SMCRYPT] 正在执行 {} ，即将对配置文件属性值的密文进行解密处理", getClass().getName());
             SmCryptContext context = SmCryptContext.fromEnvironment(environment);
@@ -72,6 +73,7 @@ public class SmCryptDecryptor {
         } finally {
             logback.logMessage(LogLevel.INFO, "[SMCRYPT] 执行完毕，系统即将开始启动");
             // 解密流程结束后关闭本类独立的早期日志上下文，释放文件句柄
+            SmCryptLog.clearActive();
             logback.closeLogging();
         }
     }

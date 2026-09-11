@@ -1,6 +1,7 @@
 package com.houkunlin.smcrypt.key;
 
 import com.houkunlin.smcrypt.PropertyLookup;
+import com.houkunlin.smcrypt.SmCryptLog;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.StreamUtils;
@@ -105,6 +106,7 @@ public class SecretKeyResolver {
                 return blankToNull(text);
             }
         } catch (IOException e) {
+            SmCryptLog.warn("读取密钥文件失败，将忽略该来源继续查找其它来源，文件：{}", location, e);
             return null;
         }
     }

@@ -121,7 +121,7 @@ public class SmCryptLogback {
      * <p>
      * logback 1.3+ 的手动 {@link LoggerContext} 默认 MDC 适配器为 null，需显式设置；
      * logback 1.2.x（Spring Boot 2.x）无 {@code setMDCAdapter} 方法，由 SLF4J 提供适配器。
-     * 因此通过反射调用：方法存在时设置，不存在时忽略。
+     * 因此通过反射调用：方法存在时设置，不存在时记录调试日志后跳过。
      *
      * @param context 独立 LoggerContext
      */
@@ -130,9 +130,11 @@ public class SmCryptLogback {
             Method method = LoggerContext.class.getMethod("setMDCAdapter", MDCAdapter.class);
             method.invoke(context, new LogbackMDCAdapter());
         } catch (NoSuchMethodException e) {
-            // logback 1.2.x 无需显式设置
+            // logback 1.2.x 无需显式设置，记录调试日志便于排查
+            logMessage(LogLevel.DEBUG, "[SMCRYPT] 当前 logback 版本不存在 setMDCAdapter 方法，跳过 MDC 适配器设置：{}", e.getMessage());
         } catch (Exception e) {
             // 设置失败时不影响正常日志输出，仅当后续访问 MDC 时可能受影响
+            logMessage(LogLevel.WARN, "[SMCRYPT] 设置 logback MDC 适配器失败，后续日志访问 MDC 时可能异常", e);
         }
     }
 
