@@ -8,6 +8,7 @@ import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Properties;
@@ -148,7 +149,8 @@ public class SecretKeyResolver {
             try (InputStream inputStream = resource.getInputStream()) {
                 if (location.toLowerCase(Locale.ROOT).endsWith(PROPERTIES_SUFFIX)) {
                     Properties keyProperties = new Properties();
-                    keyProperties.load(inputStream);
+                    // 显式按 UTF-8 读取，避免 Properties.load(InputStream) 的 ISO-8859-1 解码导致非 ASCII 口令乱码
+                    keyProperties.load(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
                     String value = keyProperties.getProperty("key");
                     if (value == null) {
                         value = keyProperties.getProperty("secret_key");

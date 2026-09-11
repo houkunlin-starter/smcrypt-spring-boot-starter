@@ -54,8 +54,6 @@ class SmCryptCliTest {
     @Test
     void readsKeyFromStdin() {
         String key = "0123456789abcdeffedcba9876543210";
-        String property = "smcrypt.sm4.key";
-        String originalProperty = System.getProperty(property);
         InputStream originalIn = System.in;
         try {
             System.setIn(new ByteArrayInputStream((key + System.lineSeparator()).getBytes(StandardCharsets.UTF_8)));
@@ -64,11 +62,6 @@ class SmCryptCliTest {
             assertEquals("stdin-key", plain.trim());
         } finally {
             System.setIn(originalIn);
-            if (originalProperty == null) {
-                System.clearProperty(property);
-            } else {
-                System.setProperty(property, originalProperty);
-            }
         }
     }
 

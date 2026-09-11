@@ -67,6 +67,14 @@ class SecretKeyResolverTest {
     }
 
     @Test
+    void resolveFromPropertiesFileWithUtf8Value(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("sm4.properties");
+        Files.write(file, "key=口令密码\n".getBytes(StandardCharsets.UTF_8));
+        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toString()));
+        assertEquals("口令密码", context.resolveKey("SM4"));
+    }
+
+    @Test
     void resolveMissingReturnsNull() {
         SmCryptContext context = TestContexts.context(new HashMap<>());
         assertNull(context.resolveKey("SM4"));
