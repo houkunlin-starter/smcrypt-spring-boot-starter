@@ -106,14 +106,11 @@ public class SmCryptDecryptor {
         boolean hasEncrypted = false;
         for (String name : source.getPropertyNames()) {
             Object raw = source.getProperty(name);
-            if (!(raw instanceof String)) {
-                continue;
-            }
-            String value = (String) raw;
-            DecryptHandler handler = findHandler(handlers, value);
+            DecryptHandler handler = raw instanceof String ? findHandler(handlers, (String) raw) : null;
             if (handler == null) {
                 continue;
             }
+            String value = (String) raw;
             try {
                 String decryptedValue = handler.getDecryptText(value);
                 Origin origin = source.getOrigin(name);
@@ -152,14 +149,11 @@ public class SmCryptDecryptor {
         boolean hasEncrypted = false;
         for (String name : source.getPropertyNames()) {
             Object raw = source.getProperty(name);
-            if (!(raw instanceof String)) {
-                continue;
-            }
-            String value = (String) raw;
-            DecryptHandler handler = findHandler(handlers, value);
+            DecryptHandler handler = raw instanceof String ? findHandler(handlers, (String) raw) : null;
             if (handler == null) {
                 continue;
             }
+            String value = (String) raw;
             try {
                 String decryptedValue = handler.getDecryptText(value);
                 decrypted.put(name, decryptedValue);
