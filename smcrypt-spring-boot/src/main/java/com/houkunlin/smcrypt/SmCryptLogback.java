@@ -1,8 +1,14 @@
 package com.houkunlin.smcrypt;
 
 import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.util.LogbackMDCAdapter;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.rolling.RollingFileAppender;
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
+import ch.qos.logback.core.util.FileSize;
 import org.slf4j.Logger;
 import org.slf4j.spi.MDCAdapter;
 import org.springframework.boot.SpringApplication;
@@ -12,6 +18,8 @@ import org.springframework.core.io.Resource;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.util.Iterator;
 
 /**
  * 启动早期独立日志工具。
@@ -41,6 +49,27 @@ public class SmCryptLogback {
     };
 
     /**
+     * 早期日志文件 appender 名称
+     */
+    private static final String FILE_APPENDER_NAME = "EARLY_FILE";
+    /**
+     * 应用名缺省值（用于日志文件名）
+     */
+    private static final String DEFAULT_APPLICATION_NAME = "spring";
+    /**
+     * 早期日志格式缺省值（logback 配置未定义 {@code EARLY_LOG_PATTERN} 时使用）
+     */
+    private static final String DEFAULT_LOG_PATTERN = "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level %logger{36} : %msg%n";
+    /**
+     * 早期日志文件名后缀
+     */
+    private static final String LOG_FILE_SUFFIX = ".smcrypt.log";
+    /**
+     * 早期日志滚动文件名后缀
+     */
+    private static final String LOG_FILE_PATTERN_SUFFIX = ".smcrypt.%d{yyyy-MM-dd}.%i.log";
+
+    /**
      * 资源加载器，用于查找早期日志配置文件
      */
     private final FileSystemResourceLoader resourceLoader = new FileSystemResourceLoader();
@@ -52,6 +81,10 @@ public class SmCryptLogback {
      * 独立日志上下文是否初始化成功
      */
     private boolean loggingReady = false;
+    /**
+     * 是否已启用文件输出（避免重复挂载文件 appender）
+     */
+    private boolean fileLoggingEnabled = false;
     /**
      * 独立日志上下文中的 Logger
      */
@@ -165,7 +198,140 @@ public class SmCryptLogback {
             earlyContext = null;
         }
         loggingReady = false;
+        fileLoggingEnabled = false;
         log = null;
+    }
+
+    /**
+     * 启用早期日志文件输出
+     * <p>
+     * 文件 appender 由代码按需创建并挂载，而非在 {@code logback-smcrypt.xml} 中静态声明，目的是
+     * 避免应用未使用密文时仍在 {@code logging.file.path} 下生成 {@code <应用名>.smcrypt.log} 文件。
+     * 因此本方法应在确认存在密文后再调用；重复调用只生效一次，独立日志上下文不可用时不做处理。
+     * <p>
+     * 文件路径、滚动策略沿用 {@code logback-smcrypt.xml} 与 Spring 标准配置解析出的上下文属性
+     * （{@code BASE_LOG_PATH}、{@code APPLICATION_NAME}、{@code EARLY_LOG_PATTERN}、
+     * {@code LOGBACK_ROLLINGPOLICY_*}、{@code FILE_LOG_CHARSET}），保持与原有行为一致。
+     */
+    public void enableFileLogging() {
+        if (fileLoggingEnabled || !loggingReady || earlyContext == null) {
+            return;
+        }
+        fileLoggingEnabled = true;
+        try {
+            if (hasAttachedFileAppender()) {
+                // 外部覆盖的 logback-smcrypt.xml 已挂载同名文件 appender，避免重复创建
+                return;
+            }
+            String basePath = resolveBaseLogPath();
+            String applicationName = propertyOrDefault("APPLICATION_NAME", DEFAULT_APPLICATION_NAME);
+            String pattern = propertyOrDefault("EARLY_LOG_PATTERN", DEFAULT_LOG_PATTERN);
+
+            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+            encoder.setContext(earlyContext);
+            encoder.setPattern(pattern);
+            encoder.setCharset(resolveFileCharset());
+            encoder.start();
+
+            RollingFileAppender<ILoggingEvent> appender = new RollingFileAppender<>();
+            appender.setContext(earlyContext);
+            appender.setName(FILE_APPENDER_NAME);
+            appender.setFile(basePath + "/" + applicationName + LOG_FILE_SUFFIX);
+            appender.setAppend(true);
+            appender.setEncoder(encoder);
+
+            SizeAndTimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new SizeAndTimeBasedRollingPolicy<>();
+            rollingPolicy.setContext(earlyContext);
+            rollingPolicy.setParent(appender);
+            rollingPolicy.setFileNamePattern(basePath + "/" + applicationName + LOG_FILE_PATTERN_SUFFIX);
+            rollingPolicy.setCleanHistoryOnStart(
+                    Boolean.parseBoolean(propertyOrDefault("LOGBACK_ROLLINGPOLICY_CLEAN_HISTORY_ON_START", "false")));
+            rollingPolicy.setMaxFileSize(FileSize.valueOf(propertyOrDefault("LOGBACK_ROLLINGPOLICY_MAX_FILE_SIZE", "10MB")));
+            rollingPolicy.setTotalSizeCap(FileSize.valueOf(propertyOrDefault("LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP", "0")));
+            rollingPolicy.setMaxHistory(Integer.parseInt(propertyOrDefault("LOGBACK_ROLLINGPOLICY_MAX_HISTORY", "7")));
+            rollingPolicy.start();
+
+            appender.setRollingPolicy(rollingPolicy);
+            appender.start();
+
+            earlyContext.getLogger(Logger.ROOT_LOGGER_NAME).addAppender(appender);
+            logMessage(LogLevel.INFO, "[SMCRYPT] 检测到密文，已启用早期日志文件输出：{}", appender.getFile());
+        } catch (Exception e) {
+            // 文件输出为增强能力，失败时保留控制台输出即可，不影响解密流程
+            logMessage(LogLevel.WARN, "[SMCRYPT] 启用早期日志文件输出失败，日志仅输出到控制台", e);
+        }
+    }
+
+    /**
+     * 判断根 logger 是否已挂载同名文件 appender
+     *
+     * <p>用于兼容部署时通过工作目录覆盖 {@code logback-smcrypt.xml}、并静态声明了文件 appender 的场景，
+     * 避免再额外创建一个同名 appender 造成重复写入。</p>
+     *
+     * @return 已存在同名 appender 时返回 true
+     */
+    private boolean hasAttachedFileAppender() {
+        Iterator<Appender<ILoggingEvent>> appenders =
+                earlyContext.getLogger(Logger.ROOT_LOGGER_NAME).iteratorForAppenders();
+        while (appenders.hasNext()) {
+            if (FILE_APPENDER_NAME.equals(appenders.next().getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 解析日志文件字符集
+     *
+     * <p>优先级与全局日志一致：{@code logging.charset.file} → JVM {@code file.encoding} → UTF-8，
+     * 避免非 ASCII 日志内容写入文件时乱码。</p>
+     *
+     * @return 文件日志字符集
+     */
+    private Charset resolveFileCharset() {
+        String charset = earlyContext.getProperty("FILE_LOG_CHARSET");
+        if (charset == null || charset.trim().isEmpty()) {
+            charset = System.getProperty("file.encoding", "UTF-8");
+        }
+        try {
+            return Charset.forName(charset.trim());
+        } catch (RuntimeException e) {
+            return Charset.forName("UTF-8");
+        }
+    }
+
+    /**
+     * 解析日志文件基础目录
+     *
+     * @return 日志目录；均未配置时回退到 {@code java.io.tmpdir}
+     */
+    private String resolveBaseLogPath() {
+        String basePath = propertyOrDefault("BASE_LOG_PATH", null);
+        if (basePath != null) {
+            return basePath;
+        }
+        String logPath = propertyOrDefault("LOG_PATH", null);
+        if (logPath != null) {
+            return logPath;
+        }
+        String logTemp = propertyOrDefault("LOG_TEMP", null);
+        if (logTemp != null) {
+            return logTemp;
+        }
+        return System.getProperty("java.io.tmpdir", ".");
+    }
+
+    /**
+     * 读取独立日志上下文属性，缺失或空白时返回默认值
+     *
+     * @param name         属性名
+     * @param defaultValue 默认值
+     * @return 去除首尾空白的属性值；缺失或空白时返回默认值
+     */
+    private String propertyOrDefault(String name, String defaultValue) {
+        String value = earlyContext.getProperty(name);
+        return value == null || value.trim().isEmpty() ? defaultValue : value.trim();
     }
 
     /**

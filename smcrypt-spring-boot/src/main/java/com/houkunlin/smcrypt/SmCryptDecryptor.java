@@ -126,6 +126,8 @@ public class SmCryptDecryptor {
                 continue;
             }
             hasCipherText = true;
+            // 确认存在密文后再启用早期日志文件输出，避免未使用密文时生成 .smcrypt.log 文件
+            logback.enableFileLogging();
             String value = (String) raw;
             String sourceName = source.getName();
             try {
@@ -181,6 +183,8 @@ public class SmCryptDecryptor {
                 continue;
             }
             hasCipherText = true;
+            // 确认存在密文后再启用早期日志文件输出，避免未使用密文时生成 .smcrypt.log 文件
+            logback.enableFileLogging();
             String value = (String) raw;
             String sourceName = source.getName();
             try {

@@ -12,6 +12,11 @@
     因此不会在后台持续进行日志滚动/归类；
   - Spring Boot 后续仍会基于 logback-spring.xml 正常初始化全局日志，完整格式自动接管。
 
+  文件输出：
+  - 本文件仅声明控制台输出；文件 appender 由 SmCryptLogback#enableFileLogging 在确认存在密文后
+    按需创建并挂载，避免应用未使用密文时仍生成 <应用名>.smcrypt.log 文件；
+  - 文件路径与滚动策略仍由下述上下文属性控制，与原有行为一致。
+
   变量说明（由 SmCryptLogback#applyLoggingProperties 注入或内置默认值）：
   - ${APPLICATION_NAME}          应用名（spring.application.name），用于日志文件名前缀
   - ${LOG_PATH}                  日志文件输出目录（logging.file.path），默认 logs
@@ -33,27 +38,7 @@
         </encoder>
     </appender>
 
-    <!-- 文件输出：按日期+大小滚动，文件名形如 {应用名}.smcrypt.log -->
-    <appender name="EARLY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${BASE_LOG_PATH}/${APPLICATION_NAME}.smcrypt.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${BASE_LOG_PATH}/${APPLICATION_NAME}.smcrypt.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <cleanHistoryOnStart>${LOGBACK_ROLLINGPOLICY_CLEAN_HISTORY_ON_START:-false}</cleanHistoryOnStart>
-            <maxFileSize>${LOGBACK_ROLLINGPOLICY_MAX_FILE_SIZE:-10MB}</maxFileSize>
-            <totalSizeCap>${LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP:-0}</totalSizeCap>
-            <maxHistory>${LOGBACK_ROLLINGPOLICY_MAX_HISTORY:-7}</maxHistory>
-        </rollingPolicy>
-        <encoder>
-            <pattern>${EARLY_LOG_PATTERN}</pattern>
-            <!-- 文件字符集与全局业务日志文件保持同步：
-                 ${FILE_LOG_CHARSET} 为 Spring Boot 根据 logging.charset.file 设置的系统属性；
-                 未配置时回退到 JVM 的 file.encoding，再兜底 UTF-8。 -->
-            <charset>${FILE_LOG_CHARSET:-${file.encoding:-UTF-8}}</charset>
-        </encoder>
-    </appender>
-
     <root level="DEBUG">
         <appender-ref ref="EARLY_CONSOLE"/>
-        <appender-ref ref="EARLY_FILE"/>
     </root>
 </configuration>
