@@ -19,10 +19,19 @@ import java.time.format.DateTimeFormatter;
  * @author HouKunLin
  */
 public final class SmCryptLog {
+    /**
+     * 回退输出时的时间格式
+     */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
+    /**
+     * 当前活动的早期日志上下文；为 null 时回退到控制台输出
+     */
     private static volatile SmCryptLogback active;
 
+    /**
+     * 工具类，禁止实例化
+     */
     private SmCryptLog() {
     }
 
@@ -42,22 +51,53 @@ public final class SmCryptLog {
         active = null;
     }
 
+    /**
+     * 输出调试级别日志
+     *
+     * @param format 日志格式（支持 {@code {}} 占位符）
+     * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则输出其堆栈
+     */
     public static void debug(String format, Object... args) {
         log(LogLevel.DEBUG, format, args);
     }
 
+    /**
+     * 输出信息级别日志
+     *
+     * @param format 日志格式（支持 {@code {}} 占位符）
+     * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则输出其堆栈
+     */
     public static void info(String format, Object... args) {
         log(LogLevel.INFO, format, args);
     }
 
+    /**
+     * 输出警告级别日志
+     *
+     * @param format 日志格式（支持 {@code {}} 占位符）
+     * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则输出其堆栈
+     */
     public static void warn(String format, Object... args) {
         log(LogLevel.WARN, format, args);
     }
 
+    /**
+     * 输出错误级别日志
+     *
+     * @param format 日志格式（支持 {@code {}} 占位符）
+     * @param args   占位符参数；若最后一个参数为 {@link Throwable} 则输出其堆栈
+     */
     public static void error(String format, Object... args) {
         log(LogLevel.ERROR, format, args);
     }
 
+    /**
+     * 统一日志输出入口
+     *
+     * @param level  日志级别
+     * @param format 日志格式
+     * @param args   占位符参数
+     */
     private static void log(LogLevel level, String format, Object... args) {
         SmCryptLogback logback = active;
         if (logback != null) {
@@ -81,6 +121,13 @@ public final class SmCryptLog {
         }
     }
 
+    /**
+     * 解析 {@code {}} 占位符并拼接日志文本（不包含尾部异常参数）
+     *
+     * @param format 日志格式
+     * @param args   占位符参数
+     * @return 拼接后的日志文本
+     */
     private static String formatMessage(String format, Object... args) {
         StringBuilder message = new StringBuilder();
         int argIndex = 0;
@@ -96,6 +143,12 @@ public final class SmCryptLog {
         return message.toString();
     }
 
+    /**
+     * 获取参数列表末尾的异常对象（SLF4J 风格的尾部异常）
+     *
+     * @param args 日志参数
+     * @return 末尾的异常对象；不存在时返回 null
+     */
     private static Throwable lastThrowable(Object... args) {
         if (args.length > 0 && args[args.length - 1] instanceof Throwable) {
             return (Throwable) args[args.length - 1];

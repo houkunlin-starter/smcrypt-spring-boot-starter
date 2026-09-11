@@ -15,8 +15,14 @@ import java.security.Security;
  * @author HouKunLin
  */
 public final class BouncyCastleSupport {
+    /**
+     * 全局共享的 BouncyCastle Provider 单例
+     */
     private static final BouncyCastleProvider PROVIDER = new BouncyCastleProvider();
 
+    /**
+     * 工具类，禁止实例化
+     */
     private BouncyCastleSupport() {
     }
 

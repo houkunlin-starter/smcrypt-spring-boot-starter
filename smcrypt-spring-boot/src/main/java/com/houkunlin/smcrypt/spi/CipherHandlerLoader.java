@@ -48,6 +48,11 @@ public class CipherHandlerLoader {
         return result;
     }
 
+    /**
+     * 创建内置密文处理器列表
+     *
+     * @return 内置处理器列表
+     */
     private List<DecryptHandler> builtinHandlers() {
         return Arrays.asList(
                 new Sm4Handler(),
@@ -58,6 +63,12 @@ public class CipherHandlerLoader {
                 new EccHandler());
     }
 
+    /**
+     * 加载通过 {@code META-INF/services} 注册的密文处理器
+     *
+     * @param classLoader 类加载器
+     * @param handlers    处理器映射（按算法名称去重）
+     */
     private void loadServiceHandlers(ClassLoader classLoader, Map<String, DecryptHandler> handlers) {
         try {
             for (DecryptHandler handler : ServiceLoader.load(DecryptHandler.class, classLoader)) {
@@ -69,6 +80,12 @@ public class CipherHandlerLoader {
         }
     }
 
+    /**
+     * 加载通过 {@code spring.factories} 注册的密文处理器
+     *
+     * @param classLoader 类加载器
+     * @param handlers    处理器映射（按算法名称去重）
+     */
     private void loadSpringFactoriesHandlers(ClassLoader classLoader, Map<String, DecryptHandler> handlers) {
         try {
             for (DecryptHandler handler : SpringFactoriesLoader.loadFactories(DecryptHandler.class, classLoader)) {
@@ -80,11 +97,22 @@ public class CipherHandlerLoader {
         }
     }
 
+    /**
+     * 生成处理器去重使用的键（算法名称大写）
+     *
+     * @param handler 密文处理器
+     * @return 大写算法名称；算法名为 null 时返回空串
+     */
     private String key(DecryptHandler handler) {
         String algorithm = handler.algorithm();
         return algorithm == null ? "" : algorithm.toUpperCase();
     }
 
+    /**
+     * 解析用于 SPI 加载的类加载器
+     *
+     * @return 线程上下文类加载器；为空时返回本类的类加载器
+     */
     private ClassLoader resolveClassLoader() {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {

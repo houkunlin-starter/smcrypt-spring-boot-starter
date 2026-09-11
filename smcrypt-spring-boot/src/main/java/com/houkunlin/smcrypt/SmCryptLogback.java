@@ -47,11 +47,30 @@ public class SmCryptLogback {
             "classpath:logback-smcrypt.xml",
     };
 
+    /**
+     * 资源加载器，用于查找早期日志配置文件
+     */
     private final FileSystemResourceLoader resourceLoader = new FileSystemResourceLoader();
+    /**
+     * 独立日志上下文
+     */
     private LoggerContext earlyContext;
+    /**
+     * 独立日志上下文是否初始化成功
+     */
     private boolean loggingReady = false;
+    /**
+     * 独立日志上下文中的 Logger
+     */
     private Logger log;
 
+    /**
+     * 构造早期日志工具并立即初始化独立日志上下文
+     *
+     * @param environment 当前 Spring 环境
+     * @param application 当前 Spring 应用（用于获取类加载器）
+     * @param logName     日志名称
+     */
     public SmCryptLogback(ConfigurableEnvironment environment, SpringApplication application, String logName) {
         this.initLogging(environment, application.getClassLoader(), logName);
     }
@@ -281,6 +300,12 @@ public class SmCryptLogback {
         }
     }
 
+    /**
+     * 获取参数列表末尾的异常对象
+     *
+     * @param args 日志参数
+     * @return 末尾的异常对象；不存在时返回 null
+     */
     private Throwable getThrowable(Object... args) {
         if (args.length > 0) {
             Object last = args[args.length - 1];

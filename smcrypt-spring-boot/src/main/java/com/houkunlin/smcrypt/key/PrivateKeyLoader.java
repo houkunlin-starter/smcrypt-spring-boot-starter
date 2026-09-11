@@ -33,6 +33,9 @@ import java.util.Base64;
  */
 public final class PrivateKeyLoader {
 
+    /**
+     * 工具类，禁止实例化
+     */
     private PrivateKeyLoader() {
     }
 
@@ -91,6 +94,13 @@ public final class PrivateKeyLoader {
         }
     }
 
+    /**
+     * 解析 PEM 格式私钥
+     *
+     * @param value PEM 文本
+     * @return 私钥对象
+     * @throws Exception 解析失败时抛出
+     */
     private static PrivateKey loadPem(String value) throws Exception {
         try (PEMParser parser = new PEMParser(new StringReader(value))) {
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(BouncyCastleSupport.provider());
@@ -108,6 +118,12 @@ public final class PrivateKeyLoader {
         }
     }
 
+    /**
+     * 将内容按 Base64 解码，解码失败时按 UTF-8 原始字节处理
+     *
+     * @param value 待解码内容
+     * @return 解码后的字节数组
+     */
     private static byte[] decodeBase64OrRaw(String value) {
         String compact = value.replaceAll("\\s", "");
         try {
@@ -118,6 +134,14 @@ public final class PrivateKeyLoader {
         }
     }
 
+    /**
+     * 将算法名称映射为 JCE KeyFactory 使用的算法名称
+     *
+     * <p>SM2、ECC、EC 均使用 {@code EC} 密钥工厂。</p>
+     *
+     * @param algorithm 算法名称
+     * @return JCE 算法名称
+     */
     private static String jceAlgorithm(String algorithm) {
         String upper = algorithm.toUpperCase();
         if ("SM2".equals(upper) || "ECC".equals(upper) || "EC".equals(upper)) {

@@ -20,13 +20,41 @@ import com.houkunlin.smcrypt.codec.EncodingDetector;
  * @author HouKunLin
  */
 public class CipherConfig {
+    /**
+     * 算法名称
+     */
     private final String algorithm;
+    /**
+     * JCE 变换串
+     */
     private final String transformation;
+    /**
+     * 加密模式
+     */
     private final String mode;
+    /**
+     * 填充方式
+     */
     private final String padding;
+    /**
+     * 初始向量
+     */
     private final byte[] iv;
+    /**
+     * 加密输出编码
+     */
     private final CipherEncoding encoding;
 
+    /**
+     * 构造算法配置
+     *
+     * @param algorithm      算法名称
+     * @param transformation JCE 变换串
+     * @param mode           加密模式
+     * @param padding        填充方式
+     * @param iv             初始向量
+     * @param encoding       加密输出编码
+     */
     public CipherConfig(String algorithm, String transformation, String mode, String padding,
                         byte[] iv, CipherEncoding encoding) {
         this.algorithm = algorithm;
@@ -76,6 +104,13 @@ public class CipherConfig {
         return new CipherConfig(algorithm, transformation, mode, padding, iv, encoding);
     }
 
+    /**
+     * 读取并去除首尾空白的属性值
+     *
+     * @param properties 属性查询接口
+     * @param key        属性键
+     * @return 去除空白后的属性值；不存在或为空时返回 null
+     */
     private static String get(PropertyLookup properties, String key) {
         String value = properties.getProperty(key);
         if (value == null) {
@@ -85,26 +120,56 @@ public class CipherConfig {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    /**
+     * 获取算法名称
+     *
+     * @return 算法名称
+     */
     public String algorithm() {
         return algorithm;
     }
 
+    /**
+     * 获取 JCE 变换串
+     *
+     * @return JCE 变换串
+     */
     public String transformation() {
         return transformation;
     }
 
+    /**
+     * 获取加密模式
+     *
+     * @return 加密模式
+     */
     public String mode() {
         return mode;
     }
 
+    /**
+     * 获取填充方式
+     *
+     * @return 填充方式
+     */
     public String padding() {
         return padding;
     }
 
+    /**
+     * 获取初始向量
+     *
+     * @return 初始向量
+     */
     public byte[] iv() {
         return iv;
     }
 
+    /**
+     * 获取加密输出编码
+     *
+     * @return 加密输出编码
+     */
     public CipherEncoding encoding() {
         return encoding;
     }

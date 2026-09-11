@@ -21,6 +21,9 @@ public final class EncodingDetector {
      */
     private static final Pattern HEX_PATTERN = Pattern.compile("^[0-9a-fA-F]+$");
 
+    /**
+     * 工具类，禁止实例化
+     */
     private EncodingDetector() {
     }
 

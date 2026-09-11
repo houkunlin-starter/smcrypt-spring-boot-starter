@@ -16,6 +16,9 @@ import java.nio.charset.StandardCharsets;
  */
 public final class KeyCodec {
 
+    /**
+     * 工具类，禁止实例化
+     */
     private KeyCodec() {
     }
 

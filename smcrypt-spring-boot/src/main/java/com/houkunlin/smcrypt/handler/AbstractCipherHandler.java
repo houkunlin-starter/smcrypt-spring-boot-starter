@@ -18,6 +18,9 @@ import java.nio.charset.StandardCharsets;
  * @author HouKunLin
  */
 public abstract class AbstractCipherHandler implements DecryptHandler, DecryptHandlerAware {
+    /**
+     * 加解密上下文，由加载器注入
+     */
     private SmCryptContext context;
 
     /**

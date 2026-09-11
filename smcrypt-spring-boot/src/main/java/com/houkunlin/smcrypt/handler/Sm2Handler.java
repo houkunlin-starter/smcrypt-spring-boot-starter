@@ -21,6 +21,9 @@ import java.security.SecureRandom;
  * @author HouKunLin
  */
 public class Sm2Handler extends AbstractCipherHandler {
+    /**
+     * 加密时使用的安全随机数生成器
+     */
     private final SecureRandom random = new SecureRandom();
 
     @Override
@@ -52,6 +55,12 @@ public class Sm2Handler extends AbstractCipherHandler {
         return engine.processBlock(plainBytes, 0, plainBytes.length);
     }
 
+    /**
+     * 解析 SM2 密文顺序
+     *
+     * @param config 算法配置
+     * @return 配置为 {@code C1C2C3} 时返回 {@link SM2Engine.Mode#C1C2C3}，否则返回 {@link SM2Engine.Mode#C1C3C2}
+     */
     private SM2Engine.Mode resolveMode(CipherConfig config) {
         return "C1C2C3".equalsIgnoreCase(config.mode()) ? SM2Engine.Mode.C1C2C3 : SM2Engine.Mode.C1C3C2;
     }

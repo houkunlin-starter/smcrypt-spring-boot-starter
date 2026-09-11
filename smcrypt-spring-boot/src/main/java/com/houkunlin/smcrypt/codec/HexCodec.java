@@ -14,6 +14,9 @@ public final class HexCodec implements CipherTextCodec {
      */
     public static final HexCodec INSTANCE = new HexCodec();
 
+    /**
+     * 单例，禁止外部实例化
+     */
     private HexCodec() {
     }
 

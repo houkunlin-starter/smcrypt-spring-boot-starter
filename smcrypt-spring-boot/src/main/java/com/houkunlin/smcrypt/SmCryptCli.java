@@ -27,6 +27,11 @@ import java.util.Map;
  */
 public class SmCryptCli {
 
+    /**
+     * 命令行入口
+     *
+     * @param args 命令行参数
+     */
     public static void main(String[] args) {
         Map<String, String> options = parse(args);
         if (options.containsKey("help") || options.containsKey("h")) {
@@ -72,6 +77,13 @@ public class SmCryptCli {
         }
     }
 
+    /**
+     * 将命令行选项写入系统属性，供 {@link SmCryptContext} 解析
+     *
+     * @param options  命令行选项
+     * @param option   选项名
+     * @param property 对应的系统属性名
+     */
     private static void applyOption(Map<String, String> options, String option, String property) {
         String value = options.get(option);
         if (value != null && !value.trim().isEmpty()) {
@@ -79,6 +91,15 @@ public class SmCryptCli {
         }
     }
 
+    /**
+     * 解析命令行参数为选项映射
+     *
+     * <p>支持 {@code --name value}、{@code --name=value} 与 {@code -x value} 三种写法；
+     * 无值的开关（如 {@code --decrypt}）映射为空串。</p>
+     *
+     * @param args 命令行参数
+     * @return 选项映射
+     */
     private static Map<String, String> parse(String[] args) {
         Map<String, String> options = new LinkedHashMap<>();
         for (int i = 0; i < args.length; i++) {
@@ -99,6 +120,9 @@ public class SmCryptCli {
         return options;
     }
 
+    /**
+     * 打印命令行用法说明
+     */
     private static void printUsage() {
         System.out.println("用法：SmCryptCli --algorithm <算法> --text <内容> [选项]");
         System.out.println("  --algorithm, -a   算法名称：SM4 / SM2 / AES / DES / RSA / ECC");

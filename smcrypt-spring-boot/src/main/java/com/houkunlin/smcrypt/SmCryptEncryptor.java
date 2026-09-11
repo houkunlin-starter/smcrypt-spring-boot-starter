@@ -25,8 +25,16 @@ import java.util.Map;
  * @author HouKunLin
  */
 public class SmCryptEncryptor {
+    /**
+     * 算法名称（大写）到密文处理器的映射
+     */
     private final Map<String, DecryptHandler> handlers;
 
+    /**
+     * 构造加密工具
+     *
+     * @param context 加解密上下文
+     */
     public SmCryptEncryptor(SmCryptContext context) {
         List<DecryptHandler> loaded = new CipherHandlerLoader().load(context);
         this.handlers = new LinkedHashMap<>();

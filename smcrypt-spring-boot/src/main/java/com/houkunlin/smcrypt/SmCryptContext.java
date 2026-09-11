@@ -17,9 +17,21 @@ import org.springframework.core.io.ResourceLoader;
  * @author HouKunLin
  */
 public class SmCryptContext {
+    /**
+     * 属性查询接口
+     */
     private final PropertyLookup properties;
+    /**
+     * 密钥解析器
+     */
     private final SecretKeyResolver secretKeyResolver;
 
+    /**
+     * 构造加解密上下文
+     *
+     * @param properties     属性查询接口
+     * @param resourceLoader 密钥文件资源加载器
+     */
     public SmCryptContext(PropertyLookup properties, ResourceLoader resourceLoader) {
         this.properties = properties;
         this.secretKeyResolver = new SecretKeyResolver(properties, resourceLoader);

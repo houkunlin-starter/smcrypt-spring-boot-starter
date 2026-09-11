@@ -190,6 +190,13 @@ public class SmCryptDecryptor {
         return false;
     }
 
+    /**
+     * 查找能够处理指定配置值的密文处理器
+     *
+     * @param handlers 密文处理器列表
+     * @param value    配置值
+     * @return 匹配的处理器；无匹配时返回 null
+     */
     private DecryptHandler findHandler(List<DecryptHandler> handlers, String value) {
         for (DecryptHandler handler : handlers) {
             if (handler.support(value)) {

@@ -14,6 +14,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * @author HouKunLin
  */
 public class SmCryptEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+    /**
+     * 版本无关的解密引擎
+     */
     private final SmCryptDecryptor delegate = new SmCryptDecryptor();
 
     @Override

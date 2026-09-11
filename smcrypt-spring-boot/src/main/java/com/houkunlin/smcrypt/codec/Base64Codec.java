@@ -13,6 +13,9 @@ public final class Base64Codec implements CipherTextCodec {
      */
     public static final Base64Codec INSTANCE = new Base64Codec();
 
+    /**
+     * 单例，禁止外部实例化
+     */
     private Base64Codec() {
     }
 

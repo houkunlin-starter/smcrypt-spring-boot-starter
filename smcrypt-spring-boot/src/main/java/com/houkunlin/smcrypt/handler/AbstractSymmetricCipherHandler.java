@@ -31,6 +31,14 @@ public abstract class AbstractSymmetricCipherHandler extends AbstractCipherHandl
         return cipher.doFinal(plainBytes);
     }
 
+    /**
+     * 初始化 JCE Cipher 的密钥与初始向量
+     *
+     * @param cipher JCE Cipher
+     * @param mode   加解密模式（{@link Cipher#ENCRYPT_MODE} / {@link Cipher#DECRYPT_MODE}）
+     * @param config 算法配置
+     * @throws Exception 初始化失败时抛出
+     */
     private void initCipher(Cipher cipher, int mode, CipherConfig config) throws Exception {
         SecretKeySpec keySpec = new SecretKeySpec(resolveSymmetricKey(), algorithm());
         if (config.hasIv()) {

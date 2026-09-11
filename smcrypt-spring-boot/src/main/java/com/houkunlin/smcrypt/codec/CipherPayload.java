@@ -8,9 +8,21 @@ package com.houkunlin.smcrypt.codec;
  * @author HouKunLin
  */
 public class CipherPayload {
+    /**
+     * 密文编码类型
+     */
     private final CipherEncoding encoding;
+    /**
+     * 去除编码前缀后的实际密文内容
+     */
     private final String text;
 
+    /**
+     * 构造密文解析结果
+     *
+     * @param encoding 密文编码类型
+     * @param text     去除编码前缀后的实际密文内容
+     */
     public CipherPayload(CipherEncoding encoding, String text) {
         this.encoding = encoding;
         this.text = text;

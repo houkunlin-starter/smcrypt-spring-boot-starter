@@ -36,9 +36,21 @@ import java.util.Properties;
  * @author HouKunLin
  */
 public class SecretKeyResolver {
+    /**
+     * 属性查询接口（Spring 场景下为 Environment）
+     */
     private final PropertyLookup properties;
+    /**
+     * 密钥文件资源加载器
+     */
     private final ResourceLoader resourceLoader;
 
+    /**
+     * 构造密钥解析器
+     *
+     * @param properties     属性查询接口
+     * @param resourceLoader 密钥文件资源加载器
+     */
     public SecretKeyResolver(PropertyLookup properties, ResourceLoader resourceLoader) {
         this.properties = properties;
         this.resourceLoader = resourceLoader;
@@ -86,6 +98,15 @@ public class SecretKeyResolver {
         return null;
     }
 
+    /**
+     * 从指定位置读取密钥内容
+     *
+     * <p>资源不存在时返回 null；{@code .properties} 文件读取 {@code key} 或 {@code secret_key} 属性，
+     * 其余文件整体内容（去除首尾空白）作为密钥。读取失败时记录警告并返回 null。</p>
+     *
+     * @param location 资源位置（支持 {@code file:} / {@code classpath:} 前缀）
+     * @return 密钥内容；资源不存在或读取失败时返回 null
+     */
     private String readResource(String location) {
         try {
             Resource resource = resourceLoader.getResource(location);
@@ -111,6 +132,12 @@ public class SecretKeyResolver {
         }
     }
 
+    /**
+     * 返回参数列表中第一个非空白值
+     *
+     * @param values 候选值
+     * @return 第一个非空白值；全部为空时返回 null
+     */
     private static String firstNonBlank(String... values) {
         for (String value : values) {
             String result = blankToNull(value);
@@ -121,6 +148,12 @@ public class SecretKeyResolver {
         return null;
     }
 
+    /**
+     * 去除首尾空白，空值返回 null
+     *
+     * @param value 原始值
+     * @return 去除空白后的值；为 null 或空白时返回 null
+     */
     private static String blankToNull(String value) {
         if (value == null) {
             return null;
