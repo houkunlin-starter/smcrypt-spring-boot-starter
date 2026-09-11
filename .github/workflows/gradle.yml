@@ -1,0 +1,30 @@
+# 此工作流将使用 Gradle 构建 Java 项目
+# 更多信息请参阅：https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v5.7.0
+        with:
+          java-version: 17
+          # corretto / dragonwell / graalvm / graalvm-community / jetbrains / kona / liberica / liberica-nik / microsoft / oracle / oracle-openjdk / sapmachine / semeru / temurin / zulu
+          distribution: temurin
+          show-download-progress: true
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew assemble
