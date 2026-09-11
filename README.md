@@ -303,8 +303,8 @@ public class DemoService {
 - `IV` 必须随机、每次加密不同且不得复用（GCM 复用 IV 会导致密钥流泄露）；
 - CBC + PKCS5/PKCS7 存在填充预言攻击面，建议改用 AEAD（GCM）；
 - **完整性校验说明**：GCM 等 AEAD 模式自带认证标签（JCE 解密时会校验，密文被篡改会抛 `AEADBadTagException`）；SM2 / SM9 /
-  ECIES 算法本身含 C3 或 MAC 校验； **CBC / ECB 等非 AEAD 模式本 starter 不做额外的完整性校验**，如需防篡改请改用 GCM
-  或自行对密文增加 MAC；
+  ECIES 算法本身含 C3 或 MAC 校验；CBC / ECB 等非 AEAD 模式可配置 `smcrypt.<算法>.mac=HmacSM3|HmacSHA256` 启用
+  encrypt-then-MAC（密文载荷 `密文 || MAC`，解密前校验）， **未启用时本 starter 不提供额外完整性校验**；
 - RSA 加密请使用 OAEP（`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`），避免 PKCS#1 v1.5；
 - 密钥长度下限：AES / SM4 至少 128 位，RSA 至少 2048 位（推荐 3072 位），ECC / SM2 至少 256 位。
 
@@ -355,33 +355,40 @@ smcrypt.rsa.file=file:/etc/app/keys/rsa-private.pem
 
 ### 10.1 配置项总览
 
-| 配置项                          | 说明                                                                      | 默认值         |
-|---------------------------------|---------------------------------------------------------------------------|----------------|
-| `smcrypt.<算法>.key`            | 密钥内容（对称：hex / Base64 / 口令；非对称：PEM / Base64(DER)）          | 无             |
-| `smcrypt.<算法>.file`           | 密钥文件（`file:` / `classpath:`，`.properties` 读 `key` / `secret_key`） | 无             |
-| `smcrypt.<算法>.transformation` | 完整 JCE 变换串，优先级最高                                               | 见算法表       |
-| `smcrypt.<算法>.mode`           | 加密模式，与 `padding` 组合生成变换串                                     | 见算法表       |
-| `smcrypt.<算法>.padding`        | 填充方式                                                                  | `PKCS5Padding` |
-| `smcrypt.<算法>.iv`             | 初始向量（hex / Base64，自动识别）                                        | 无             |
-| `smcrypt.<算法>.encoding`       | 加密输出所用编码（`hex` / `base64`）                                      | `base64`       |
+| 配置项                          | 说明                                                                      | 默认值             |
+|---------------------------------|---------------------------------------------------------------------------|--------------------|
+| `smcrypt.<算法>.key`            | 密钥内容（对称：hex / Base64 / 口令；非对称：PEM / Base64(DER)）          | 无                 |
+| `smcrypt.<算法>.file`           | 密钥文件（`file:` / `classpath:`，`.properties` 读 `key` / `secret_key`） | 无                 |
+| `smcrypt.<算法>.transformation` | 完整 JCE 变换串，优先级最高                                               | 见算法表           |
+| `smcrypt.<算法>.mode`           | 加密模式，与 `padding` 组合生成变换串                                     | 见算法表           |
+| `smcrypt.<算法>.padding`        | 填充方式                                                                  | `PKCS5Padding`     |
+| `smcrypt.<算法>.iv`             | 初始向量（hex / Base64，自动识别）                                        | 无                 |
+| `smcrypt.<算法>.encoding`       | 加密输出所用编码（`hex` / `base64`）                                      | `base64`           |
+| `smcrypt.<算法>.mac`            | 完整性校验算法（`HmacSM3` / `HmacSHA256`），仅对称算法有效                | 无（不启用）       |
+| `smcrypt.<算法>.mac-key`        | MAC 密钥（hex / Base64 / 口令），默认复用加密密钥                         | 无（复用加密密钥） |
 
 > `transformation` 优先级最高：一旦配置，`mode` / `padding` 不再参与变换串拼接。
 > `encoding` 只影响 **加密输出**，解密时编码会自动识别，无需配置。
+> 配置 `mac` 后启用 encrypt-then-MAC：加密输出为 `密文 || MAC`，解密前先校验 MAC，校验失败会抛出异常；
+> `mac` / `mac-key` 仅对对称算法（SM4 / AES / DES / DESEDE）有效。
 
 ### 10.2 算法与参数支持矩阵
 
-| 配置项           | SM4 / AES / DES / DESEDE（对称） | RSA                                   | ECC（ECIES）         | SM2                    |
-|------------------|----------------------------------|---------------------------------------|----------------------|------------------------|
-| `transformation` | 支持                             | 支持                                  | 支持（默认 `ECIES`） | 不生效                 |
-| `mode`           | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置             | 仅 `C1C3C2` / `C1C2C3` |
-| `padding`        | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置             | 不生效                 |
-| `iv`             | 支持（非 ECB 模式）              | 不适用                                | 不适用               | 不适用                 |
-| `encoding`       | 支持                             | 支持                                  | 支持                 | 支持                   |
+| 配置项           | SM4 / AES / DES / DESEDE（对称） | RSA                                   | ECC（ECIES）           | SM2                    |
+|------------------|----------------------------------|---------------------------------------|------------------------|------------------------|
+| `transformation` | 支持                             | 支持                                  | 支持（默认 `ECIES`）   | 不生效                 |
+| `mode`           | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置               | 仅 `C1C3C2` / `C1C2C3` |
+| `padding`        | 支持                             | 参与拼接（建议改用 `transformation`） | 不可设置               | 不生效                 |
+| `iv`             | 支持（非 ECB 模式）              | 不适用                                | 不适用                 | 不适用                 |
+| `encoding`       | 支持                             | 支持                                  | 支持                   | 支持                   |
+| `mac`            | 支持（`HmacSM3` / `HmacSHA256`） | 不适用                                | 不适用（算法自带 MAC） | 不适用（算法自带 C3）  |
 
 说明：
 
 - **SM4 / AES / DES / DESEDE**：`transformation` / `mode` / `padding` / `iv` 可自由组合；ECB 模式无需 `iv`，CBC/GCM 等模式需提供
   `iv`；
+- **完整性校验（MAC）**：仅对称算法支持；配置 `smcrypt.<算法>.mac` 后启用 encrypt-then-MAC（密文载荷为 `密文 || MAC`），
+  解密时先校验 MAC，防篡改；非对称算法（SM2 / SM9 / ECIES）已内置完整性校验，无需额外配置；
 - **RSA**：建议直接用 `transformation` 指定填充，如 `RSA/ECB/PKCS1Padding`、`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`；
 - **ECC**：基于 ECIES，仅使用 `transformation`（默认 `ECIES`）， **不要**配置 `mode` / `padding`，否则会拼出非法变换串；
 - **SM2**：`mode` 仅用于选择密文顺序（默认 `C1C3C2`），其余参数不生效；
@@ -499,6 +506,19 @@ smcrypt.desede.iv=0123456789abcdef
 ```
 
 > 3DES 属过时算法，仅建议用于兼容遗留系统密文；新系统请使用 AES 或 SM4。
+
+#### 场景 11：启用完整性校验（MAC）
+
+```properties
+# HMAC-SM3，MAC 密钥默认复用加密密钥
+smcrypt.sm4.mac=HmacSM3
+# HMAC-SHA256，单独指定 MAC 密钥
+smcrypt.aes.mac=HmacSHA256
+smcrypt.aes.mac-key=aabbccddeeff00112233445566778899
+```
+
+启用后加密输出为 `SM4ENC(base64,<密文||MAC>)`（encrypt-then-MAC），解密时会先校验 MAC，
+密文被篡改将抛出异常；`mac` / `mac-key` 仅对对称算法有效。
 
 > 以上配置项适用于 SM4 / AES / DES / DESEDE / RSA / ECC 等算法；SM9 的配置项单独见下一节。
 

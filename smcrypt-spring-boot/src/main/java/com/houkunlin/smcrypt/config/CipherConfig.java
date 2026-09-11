@@ -3,6 +3,7 @@ package com.houkunlin.smcrypt.config;
 import com.houkunlin.smcrypt.PropertyLookup;
 import com.houkunlin.smcrypt.codec.CipherEncoding;
 import com.houkunlin.smcrypt.codec.EncodingDetector;
+import com.houkunlin.smcrypt.key.KeyCodec;
 
 /**
  * 单个算法的加解密配置。
@@ -14,7 +15,9 @@ import com.houkunlin.smcrypt.codec.EncodingDetector;
  *     <li>{@code smcrypt.<alg>.mode}：模式，与 {@code padding} 组合生成变换串；</li>
  *     <li>{@code smcrypt.<alg>.padding}：填充方式，默认 {@code PKCS5Padding}；</li>
  *     <li>{@code smcrypt.<alg>.iv}：初始向量（hex 或 Base64，自动识别）；</li>
- *     <li>{@code smcrypt.<alg>.encoding}：加密输出所用编码，默认 Base64。</li>
+ *     <li>{@code smcrypt.<alg>.encoding}：加密输出所用编码，默认 Base64；</li>
+ *     <li>{@code smcrypt.<alg>.mac}：完整性校验算法（{@code HmacSM3} / {@code HmacSHA256}），默认不启用；</li>
+ *     <li>{@code smcrypt.<alg>.mac-key}：MAC 密钥（hex / Base64 / 口令），默认复用加密密钥。</li>
  * </ul>
  *
  * @author HouKunLin
@@ -49,6 +52,14 @@ public class CipherConfig {
      * 加密输出编码
      */
     private final CipherEncoding encoding;
+    /**
+     * 完整性校验（MAC）算法；为 null 表示不启用
+     */
+    private final MacAlgorithm macAlgorithm;
+    /**
+     * MAC 密钥；为 null 表示复用加密密钥
+     */
+    private final byte[] macKey;
 
     /**
      * 构造算法配置
@@ -59,15 +70,19 @@ public class CipherConfig {
      * @param padding        填充方式
      * @param iv             初始向量
      * @param encoding       加密输出编码
+     * @param macAlgorithm   完整性校验算法；null 表示不启用
+     * @param macKey         MAC 密钥；null 表示复用加密密钥
      */
     public CipherConfig(String algorithm, String transformation, String mode, String padding,
-                        byte[] iv, CipherEncoding encoding) {
+                        byte[] iv, CipherEncoding encoding, MacAlgorithm macAlgorithm, byte[] macKey) {
         this.algorithm = algorithm;
         this.transformation = transformation;
         this.mode = mode;
         this.padding = padding;
         this.iv = iv;
         this.encoding = encoding;
+        this.macAlgorithm = macAlgorithm;
+        this.macKey = macKey;
     }
 
     /**
@@ -107,7 +122,15 @@ public class CipherConfig {
             ivValue = EncodingDetector.detectEncoding(ivText).codec().decode(ivText);
         }
 
-        return new CipherConfig(algorithm, transformationValue, modeValue, paddingValue, ivValue, encodingValue);
+        MacAlgorithm macAlgorithmValue = MacAlgorithm.fromToken(get(properties, prefix + "mac"));
+        byte[] macKeyValue = null;
+        String macKeyText = get(properties, prefix + "mac-key");
+        if (macKeyText != null) {
+            macKeyValue = KeyCodec.decodeKey(macKeyText);
+        }
+
+        return new CipherConfig(algorithm, transformationValue, modeValue, paddingValue, ivValue, encodingValue,
+                macAlgorithmValue, macKeyValue);
     }
 
     /**
@@ -178,6 +201,33 @@ public class CipherConfig {
      */
     public CipherEncoding encoding() {
         return encoding;
+    }
+
+    /**
+     * 获取完整性校验（MAC）算法
+     *
+     * @return MAC 算法；未启用时返回 null
+     */
+    public MacAlgorithm macAlgorithm() {
+        return macAlgorithm;
+    }
+
+    /**
+     * 获取 MAC 密钥
+     *
+     * @return MAC 密钥；未单独配置时返回 null（表示复用加密密钥）
+     */
+    public byte[] macKey() {
+        return macKey;
+    }
+
+    /**
+     * 是否启用完整性校验（MAC）
+     *
+     * @return 已启用返回 true
+     */
+    public boolean hasMac() {
+        return macAlgorithm != null;
     }
 
     /**

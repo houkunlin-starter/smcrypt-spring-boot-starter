@@ -19,8 +19,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CipherHandlerRoundTripTest {
     private static final String SM4_KEY = "0123456789abcdeffedcba9876543210";
@@ -78,6 +77,37 @@ class CipherHandlerRoundTripTest {
         handler.setContext(TestContexts.context(properties));
         String cipher = handler.getEncryptText("aes-gcm-data");
         assertEquals("aes-gcm-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void sm4MacRoundTrip() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.sm4.key", SM4_KEY);
+        properties.put("smcrypt.sm4.mac", "HmacSM3");
+        Sm4Handler handler = new Sm4Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("sm4-mac-data");
+        assertEquals("sm4-mac-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void aesMacWithSeparateMacKeyRoundTrip() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.aes.key", AES_KEY);
+        properties.put("smcrypt.aes.mac", "HmacSHA256");
+        properties.put("smcrypt.aes.mac-key", "aabbccddeeff00112233445566778899");
+        AesHandler handler = new AesHandler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("aes-mac-data");
+        assertEquals("aes-mac-data", handler.getDecryptText(cipher));
+    }
+
+    @Test
+    void macDetectsTamperedCipherText() throws Exception {
+        Map<String, String> properties = singleton("smcrypt.sm4.key", SM4_KEY);
+        properties.put("smcrypt.sm4.mac", "HmacSM3");
+        Sm4Handler handler = new Sm4Handler();
+        handler.setContext(TestContexts.context(properties));
+        String cipher = handler.getEncryptText("tamper-data");
+        assertThrows(SecurityException.class, () -> handler.getDecryptText(tamperBase64Payload(cipher)));
     }
 
     @Test
@@ -194,6 +224,18 @@ class CipherHandlerRoundTripTest {
             properties.put("smcrypt.sm9.cipher-format", cipherFormat);
         }
         return properties;
+    }
+
+    /**
+     * 翻转密文载荷首字节，模拟被篡改的密文（仅适用于 base64 编码的对称密文）。
+     */
+    private static String tamperBase64Payload(String cipherText) {
+        int comma = cipherText.indexOf(',');
+        String prefix = cipherText.substring(0, comma + 1);
+        String body = cipherText.substring(comma + 1, cipherText.length() - 1);
+        byte[] bytes = Base64.getDecoder().decode(body);
+        bytes[0] ^= 0x01;
+        return prefix + Base64.getEncoder().encodeToString(bytes) + ")";
     }
 
     private static KeyPair ecKeyPair(String curve) throws Exception {
