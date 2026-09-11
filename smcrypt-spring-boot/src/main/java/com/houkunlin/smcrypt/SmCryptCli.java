@@ -125,9 +125,10 @@ public class SmCryptCli {
                 index++;
                 continue;
             }
-            String name = arg.startsWith(LONG_OPTION_PREFIX)
-                    ? arg.substring(LONG_OPTION_PREFIX.length())
-                    : arg.substring(OPTION_PREFIX.length());
+            int prefixLength = arg.startsWith(LONG_OPTION_PREFIX)
+                    ? LONG_OPTION_PREFIX.length()
+                    : OPTION_PREFIX.length();
+            String name = arg.substring(prefixLength);
             int equals = name.indexOf('=');
             if (equals >= 0) {
                 options.put(name.substring(0, equals), name.substring(equals + 1));
