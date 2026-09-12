@@ -54,7 +54,7 @@ class SecretKeyResolverTest {
     void resolveFromPlainFile(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("sm4.key");
         Files.write(file, "deadbeef\n".getBytes(StandardCharsets.UTF_8));
-        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toString()));
+        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toUri().toString()));
         assertEquals("deadbeef", context.resolveKey("SM4"));
     }
 
@@ -62,7 +62,7 @@ class SecretKeyResolverTest {
     void resolveFromPropertiesFile(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("sm4.properties");
         Files.write(file, "key=deadbeef\n".getBytes(StandardCharsets.UTF_8));
-        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toString()));
+        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toUri().toString()));
         assertEquals("deadbeef", context.resolveKey("SM4"));
     }
 
@@ -70,7 +70,7 @@ class SecretKeyResolverTest {
     void resolveFromPropertiesFileWithUtf8Value(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("sm4.properties");
         Files.write(file, "key=口令密码\n".getBytes(StandardCharsets.UTF_8));
-        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toString()));
+        SmCryptContext context = TestContexts.context(singleton("smcrypt.sm4.file", file.toUri().toString()));
         assertEquals("口令密码", context.resolveKey("SM4"));
     }
 
