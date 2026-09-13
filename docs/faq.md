@@ -24,8 +24,13 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 **7. 编码歧义。** 对无编码前缀且内容恰好同时满足 hex 与 Base64 的密文，建议显式补充编码前缀。
 
+**8. BouncyCastle 版本被降级会影响 SM9 吗？** SM9 需要 BouncyCastle 1.86+。若下游排除了本项目的 BouncyCastle 依赖
+并锁定到更低版本，启动时 SM9 处理器会因缺少相关类而被自动跳过（记录 WARN），其余算法与启动流程不受影响。
+如需使用 SM9，请确保运行时 BouncyCastle 版本不低于 1.86。
+
 ## 相关文档
 
 - [密文格式](cipher-format.md)
 - [算法安全性与选型建议](security.md)
 - [日志](logging.md)
+- [SM9 标识加密](algorithms/sm9.md)

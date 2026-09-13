@@ -5,10 +5,7 @@ import com.houkunlin.smcrypt.TestContexts;
 import com.houkunlin.smcrypt.handler.DecryptHandler;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,6 +35,23 @@ class CipherHandlerLoaderTest {
         DecryptHandler handler = find(load(), "FACTORY");
         assertNotNull(handler);
         assertEquals("custom", handler.getDecryptText(handler.getEncryptText("custom")));
+    }
+
+    @Test
+    void addHandlerIfPresentSkipsMissingClass() {
+        List<DecryptHandler> handlers = new ArrayList<>();
+        assertDoesNotThrow(() -> new CipherHandlerLoader()
+                .addHandlerIfPresent(handlers, "com.example.NotExistHandler", "测试"));
+        assertTrue(handlers.isEmpty(), "缺少依赖类时应跳过，不应加入处理器");
+    }
+
+    @Test
+    void addHandlerIfPresentLoadsExistingClass() {
+        List<DecryptHandler> handlers = new ArrayList<>();
+        new CipherHandlerLoader().addHandlerIfPresent(handlers,
+                "com.houkunlin.smcrypt.handler.Sm4Handler", "SM4");
+        assertEquals(1, handlers.size());
+        assertEquals("SM4", handlers.get(0).algorithm());
     }
 
     private List<DecryptHandler> load() {

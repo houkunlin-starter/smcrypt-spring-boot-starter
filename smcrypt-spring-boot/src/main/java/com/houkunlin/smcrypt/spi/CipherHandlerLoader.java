@@ -25,6 +25,13 @@ import java.util.*;
  * @author HouKunLin
  */
 public class CipherHandlerLoader {
+    /**
+     * SM9 处理器类名
+     *
+     * <p>SM9 需要 BouncyCastle 1.86+，通过反射延迟加载，以便在低版本 BouncyCastle 环境下
+     * 捕获 {@link LinkageError} 并跳过 SM9，而不是导致应用启动失败。</p>
+     */
+    private static final String SM9_HANDLER_CLASS = "com.houkunlin.smcrypt.handler.Sm9Handler";
 
     /**
      * 加载全部处理器并注入上下文
@@ -64,27 +71,59 @@ public class CipherHandlerLoader {
     /**
      * 创建内置密文处理器列表
      *
+     * <p>SM9 处理器采用反射延迟加载并容错，其余内置处理器直接实例化。</p>
+     *
      * @return 内置处理器列表
      */
     private List<DecryptHandler> builtinHandlers() {
-        return Arrays.asList(
-                new Sm4Handler(),
-                new Sm2Handler(),
-                new Sm9Handler(),
-                new AesHandler(),
-                new DesHandler(),
-                new DesEdeHandler(),
-                new ChaCha20Handler(),
-                new Gost3412Handler(),
-                new Dstu7624Handler(),
-                new Rc6Handler(),
-                new CamelliaHandler(),
-                new AriaHandler(),
-                new SeedHandler(),
-                new RsaHandler(),
-                new EccHandler(),
-                new PbeCipherHandler(),
-                new JasyptCipherHandler());
+        List<DecryptHandler> handlers = new ArrayList<>();
+        handlers.add(new Sm4Handler());
+        handlers.add(new Sm2Handler());
+        addSm9Handler(handlers);
+        handlers.add(new AesHandler());
+        handlers.add(new DesHandler());
+        handlers.add(new DesEdeHandler());
+        handlers.add(new ChaCha20Handler());
+        handlers.add(new Gost3412Handler());
+        handlers.add(new Dstu7624Handler());
+        handlers.add(new Rc6Handler());
+        handlers.add(new CamelliaHandler());
+        handlers.add(new AriaHandler());
+        handlers.add(new SeedHandler());
+        handlers.add(new RsaHandler());
+        handlers.add(new EccHandler());
+        handlers.add(new PbeCipherHandler());
+        handlers.add(new JasyptCipherHandler());
+        return handlers;
+    }
+
+    /**
+     * 注册 SM9 处理器（BouncyCastle 1.86+ 才支持，低版本时跳过）
+     *
+     * @param handlers 内置处理器列表
+     */
+    private void addSm9Handler(List<DecryptHandler> handlers) {
+        addHandlerIfPresent(handlers, SM9_HANDLER_CLASS, "SM9（需要 BouncyCastle 1.86+）");
+    }
+
+    /**
+     * 通过反射加载并注册处理器，加载失败（缺少依赖类等）时跳过
+     *
+     * <p>使用反射而非直接引用，可确保加载失败发生在运行期并可被捕获；若在代码中直接
+     * {@code new Sm9Handler()}，低版本 BouncyCastle 下类验证/链接阶段即可能抛出
+     * {@link LinkageError}，导致整个应用启动失败。</p>
+     *
+     * @param handlers    处理器列表
+     * @param className   处理器类名
+     * @param description 处理器描述（用于告警）
+     */
+    void addHandlerIfPresent(List<DecryptHandler> handlers, String className, String description) {
+        try {
+            Class<?> handlerType = Class.forName(className, true, resolveClassLoader());
+            handlers.add((DecryptHandler) handlerType.getDeclaredConstructor().newInstance());
+        } catch (LinkageError | ReflectiveOperationException e) {
+            SmCryptLog.warn("加载 {} 处理器失败，已跳过该算法：{}", description, e.toString());
+        }
     }
 
     /**

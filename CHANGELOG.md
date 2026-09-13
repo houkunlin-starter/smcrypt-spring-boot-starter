@@ -33,6 +33,8 @@
 - 修复 SM2 的 `mode`（密文顺序）被错误用于拼接 JCE 变换串，产生无意义变换串的问题。
 - 安全体检新增 PBE JCE 模式弱算法（`PBEWithMD5AndDES`）检测。
 - 修复 `.properties` 密钥文件按 ISO-8859-1 解码导致非 ASCII 口令乱码的问题，改为按 UTF-8 读取。
+- 修复低版本 BouncyCastle（低于 1.86）环境下加载 SM9 处理器失败导致应用启动失败的问题：SM9 改为反射延迟加载，
+  缺少相关类时记录 WARN 并跳过，不影响其它算法与启动流程。
 - 修复通过 `META-INF/services` 加载处理器时，provider 实例化失败抛出的 `ServiceConfigurationError`（`Error` 子类）
   未被捕获、导致应用启动中断的问题。
 - 核心模块编译依赖对齐 Spring Boot 2.7.0：`slf4j-api` 1.7.36 + `logback-classic` 1.2.13，修正此前

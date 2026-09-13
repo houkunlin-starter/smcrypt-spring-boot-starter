@@ -7,6 +7,8 @@ SM9 是国密 **标识密码（IBC，Identity-Based Cryptography） **算法（G
 无需数字证书。本 starter 仅集成其中的 **公钥加密 / KEM** 能力，用于解密配置密文。
 
 > 需要 BouncyCastle **1.86 及以上**版本（本 starter 已使用 1.86）。
+> 若运行环境中的 BouncyCastle 被降级/排除到 1.86 以下，启动时加载 SM9 处理器会因缺少相关类而失败；
+> 本 starter 对此做了容错——会记录 WARN 并 **跳过 SM9 处理器**，其余算法不受影响，不会导致应用启动失败。
 > SM9 属小众且强依赖 KGC 的算法，新系统建议优先使用 SM2 或 SM4。
 
 ## 算法与密文格式
@@ -109,7 +111,7 @@ public class Main {
 
 ## 限制
 
-- 需要 BouncyCastle 1.86+；
+- 需要 BouncyCastle 1.86+；低于该版本时 SM9 处理器会被自动跳过（记录 WARN），不影响其它算法；
 - 仅支持数据封装类型 `STREAM` 与 `SM4-ECB`（GM/T 0080 的 SM4-CBC / OFB / CFB 未实现）；
 - 用户私钥无标准 Java / DER / PEM 编码，须按 G2 点裸编码（129 字节）提供；
 - 密钥交换与数字签名不在本 starter 范围内。
