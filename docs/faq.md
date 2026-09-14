@@ -24,9 +24,12 @@ smcrypt.aes.iv=00112233445566778899aabbccddeeff
 
 **7. 编码歧义。** 对无编码前缀且内容恰好同时满足 hex 与 Base64 的密文，建议显式补充编码前缀。
 
-**8. BouncyCastle 版本被降级会影响 SM9 吗？** SM9 需要 BouncyCastle 1.86+。若下游排除了本项目的 BouncyCastle 依赖
-并锁定到更低版本，启动时 SM9 处理器会因缺少相关类而被自动跳过（记录 WARN），其余算法与启动流程不受影响。
-如需使用 SM9，请确保运行时 BouncyCastle 版本不低于 1.86。
+**8. BouncyCastle 版本与坐标？** 项目按 JDK 选择坐标：Boot 2 用 `bcprov-jdk15to18` / `bcpkix-jdk15to18`，
+Boot 3/4 用 `bcprov-jdk18on` / `bcpkix-jdk18on`；核心模块本身不传递 BouncyCastle。
+两个坐标包含相同的类， **不可同时引入**（classpath 重复类、module path 模块名冲突）。
+若使用方已有自己的 BouncyCastle，可排除 starter 传递的坐标并保留自身坐标（版本需 ≥ 1.86）。
+SM9 需要 BouncyCastle 1.86+；若运行时版本更低，启动时 SM9 处理器会因缺少相关类被自动跳过（记录 WARN），
+其余算法与启动流程不受影响。如需使用 SM9，请确保运行时 BouncyCastle 版本不低于 1.86。
 
 ## 相关文档
 

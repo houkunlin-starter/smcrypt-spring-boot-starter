@@ -20,11 +20,12 @@
 
 - `smcrypt-spring-boot`：版本无关核心（Java 8）。包含 `codec`（编解码）、`handler`（算法处理器）、
   `key`（密钥解析、私钥加载与密钥生成）、`config`（算法配置）、`spi`（处理器加载）、`SmCryptDecryptor`（解密引擎）、
-  `SmCryptEncryptor` / `SmCryptKeyGenerator` / `SmCryptCli`（加密与密钥生成工具）。`compileOnly` 依赖 Spring Boot 2.7，不得引用
-  Boot 3/4 专有 API。
+  `SmCryptEncryptor` / `SmCryptKeyGenerator` / `SmCryptCli`（加密与密钥生成工具）。`compileOnly` 依赖 Spring Boot 2.7
+  与 BouncyCastle（`bcprov/bcpkix-jdk15to18`），不得引用 Boot 3/4 专有 API。
 - `smcrypt-spring-boot2/3/4-starter`：各自仅有一个薄适配器 `SmCryptEnvironmentPostProcessor`，
   实现对应版本的 `EnvironmentPostProcessor` 并委托核心引擎。Boot 4 的接口位于 `org.springframework.boot`
-  （2/3 位于 `org.springframework.boot.env`）。
+  （2/3 位于 `org.springframework.boot.env`）。运行时 BouncyCastle 坐标由 starter 提供：
+  Boot 2 用 `bcprov/bcpkix-jdk15to18`，Boot 3/4 用 `bcprov/bcpkix-jdk18on`（版本 1.86，SM9 需 1.86+）。
 
 ## 关键约定
 

@@ -25,6 +25,8 @@
 - 预编译正则表达式，减少重复编译开销。
 - 合并解密前的密文探测与解密遍历为单次扫描，减少一次全量属性遍历。
 - 处理器加载器新增按算法名称索引的 `loadMap`，`SmCryptEncryptor` 复用该映射，避免重复构建。
+- BouncyCastle 依赖按 JDK 拆分：核心模块改为 `compileOnly`，Boot 2 starter 提供 `bcprov/bcpkix-jdk15to18`、
+  Boot 3/4 starter 提供 `bcprov/bcpkix-jdk18on`，避免与使用方自身的 BouncyCastle 依赖冲突。
 - 早期日志文件改为在检测到密文后才创建并挂载，避免未使用密文的应用仍生成 `<应用名>.smcrypt.log` 文件。
 
 ### 修复

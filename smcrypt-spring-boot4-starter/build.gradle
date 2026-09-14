@@ -10,8 +10,13 @@ plugins {
 }
 apply from: rootProject.file("publishing.gradle")
 
+// BouncyCastle 版本（SM9 需 1.86+）；Java 17 使用 jdk18on 坐标
+def bouncyCastleVersion = '1.86'
+
 dependencies {
     api project(':smcrypt-spring-boot')
+    api "org.bouncycastle:bcprov-jdk18on:${bouncyCastleVersion}"
+    api "org.bouncycastle:bcpkix-jdk18on:${bouncyCastleVersion}"
     compileOnly 'org.springframework.boot:spring-boot-starter-webmvc'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

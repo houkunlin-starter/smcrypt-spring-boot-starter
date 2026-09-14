@@ -4,13 +4,14 @@
 
 ## 环境要求
 
-| 使用场景        | JDK      | 对应依赖                       |
-|-----------------|----------|--------------------------------|
-| Spring Boot 2.x | Java 8+  | `smcrypt-spring-boot2-starter` |
-| Spring Boot 3.x | Java 17+ | `smcrypt-spring-boot3-starter` |
-| Spring Boot 4.x | Java 17+ | `smcrypt-spring-boot4-starter` |
+| 使用场景        | JDK      | 对应依赖                       | BouncyCastle 坐标                       |
+|-----------------|----------|--------------------------------|-----------------------------------------|
+| Spring Boot 2.x | Java 8+  | `smcrypt-spring-boot2-starter` | `bcprov-jdk15to18` / `bcpkix-jdk15to18` |
+| Spring Boot 3.x | Java 17+ | `smcrypt-spring-boot3-starter` | `bcprov-jdk18on` / `bcpkix-jdk18on`     |
+| Spring Boot 4.x | Java 17+ | `smcrypt-spring-boot4-starter` | `bcprov-jdk18on` / `bcpkix-jdk18on`     |
 
-核心模块以 Java 8 编译，BouncyCastle 使用 `jdk15to18` 变体以兼容低版本 JDK。
+核心模块以 Java 8 编译，BouncyCastle 在其内部为 `compileOnly`；运行时坐标由各 starter 按目标 JDK 提供
+（Boot 2 用 `jdk15to18`，Boot 3/4 用 `jdk18on`），避免与使用方自身的 BouncyCastle 依赖冲突。
 SM9 需要 BouncyCastle **1.86 及以上**（本 starter 已使用 1.86）。
 
 ## 快速开始
@@ -29,6 +30,7 @@ implementation 'com.houkunlin:smcrypt-spring-boot4-starter:1.0.0'
 Maven：
 
 ```xml
+
 <dependency>
     <groupId>com.houkunlin</groupId>
     <artifactId>smcrypt-spring-boot3-starter</artifactId>
@@ -73,6 +75,7 @@ smcrypt.sm4.key=0123456789abcdeffedcba9876543210
 ### 4. 正常使用
 
 ```java
+
 @Component
 public class DemoService {
     @Value("${spring.datasource.password}")

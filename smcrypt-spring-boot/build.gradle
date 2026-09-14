@@ -13,15 +13,19 @@ def bouncyCastleVersion = '1.86'
 
 dependencies {
     // BouncyCastle 提供 SM2/SM4/SM9 及 AES/DES/RSA/ECC 算法支持。
-    // 这里显式指定版本而不使用 platform/BOM：否则生成的 pom.xml 会包含 dependencyManagement 的
-    // BOM 导入，可能污染使用方自身的 dependencyManagement
-    api "org.bouncycastle:bcprov-jdk15to18:${bouncyCastleVersion}"
-    api "org.bouncycastle:bcpkix-jdk15to18:${bouncyCastleVersion}"
+    // 核心模块以 compileOnly 依赖 BC，运行时的 BC 坐标由各 starter 按目标 JDK 提供：
+    //   - Java 8（Boot 2）：bcprov-jdk15to18 / bcpkix-jdk15to18
+    //   - Java 17（Boot 3/4）：bcprov-jdk18on / bcpkix-jdk18on
+    // 这样可避免核心传递错误的坐标与使用方自身的 BC 依赖冲突（两个坐标含相同类，不能共存）。
+    compileOnly "org.bouncycastle:bcprov-jdk15to18:${bouncyCastleVersion}"
+    compileOnly "org.bouncycastle:bcpkix-jdk15to18:${bouncyCastleVersion}"
 
     compileOnly 'org.slf4j:slf4j-api:1.7.36'
     compileOnly 'org.springframework.boot:spring-boot:2.7.0'
     compileOnly 'ch.qos.logback:logback-classic:1.2.13'
 
+    testImplementation "org.bouncycastle:bcprov-jdk15to18:${bouncyCastleVersion}"
+    testImplementation "org.bouncycastle:bcpkix-jdk15to18:${bouncyCastleVersion}"
     testImplementation 'org.springframework.boot:spring-boot:2.7.0'
     testImplementation 'ch.qos.logback:logback-classic:1.2.13'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
