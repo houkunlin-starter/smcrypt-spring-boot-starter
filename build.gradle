@@ -11,7 +11,7 @@ tasks.matching { it.name.startsWith('jreleaser') }.configureEach {
 
 allprojects {
     group = 'com.houkunlin'
-    version = '1.0.1'
+    version = '1.0.2'
     description = """
 解密 SpringBoot 配置文件中的密文属性值，支持 SM2、SM4、AES、DES、RSA、ECC 等算法与 hex、Base64 编码。
 implementation '${group}:smcrypt-spring-boot2-starter:${version}' build by spring boot 2.7.0 java 8.
